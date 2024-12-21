@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "fastapi-duckdb"
+name = "fastapi-polars"
 version = "0.1.0"
 description = ""
 authors = ["Your Name <you@example.com>"]

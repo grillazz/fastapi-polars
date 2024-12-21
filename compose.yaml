@@ -1,0 +1,28 @@
+name: parquet_content_pump
+services:
+  minio:
+    container_name: minio
+    image: minio/minio:latest
+    ports:
+      - 9000:9000
+      - 9001:9001
+    volumes:
+      - datastore:/data
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio123
+    command: server /data --console-address ":9001"
+
+  createbuckets:
+    image: minio/mc
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc alias set myminio http://minio:9000 minio minio123;
+      /usr/bin/mc mb myminio/daily;
+      /usr/bin/mc anonymous set public myminio/daily;
+      exit 0;
+      "
+volumes:
+  datastore:
