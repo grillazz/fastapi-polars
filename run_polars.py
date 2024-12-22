@@ -49,3 +49,11 @@ async def polars_iced_data(data: list[PolarsIcedSchema], request: Request):
     # cProfile.run("pl.DataFrame(_d.model_dump() for _d in data)")
 
     return {"message": "Data frozen in ice cube"}
+
+
+
+# TODO: endpoint to post dataframe to s3
+
+# TODO: scheduler only sent POST to this endpoint in defined time
+
+# TODO: endpoint to read / scan parquet from s3
