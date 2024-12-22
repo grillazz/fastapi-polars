@@ -2,7 +2,7 @@
 
 # Run FastAPI with uvicorn
 run:
-	uvicorn main:app --host 0.0.0.0 --port 8000 --workers 2
+	uvicorn run_polars:app --host 0.0.0.0 --port 8000 --reload
 
 
 run-polars:

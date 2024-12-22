@@ -1,15 +1,15 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends
 from contextlib import asynccontextmanager
 from pydantic import BaseModel
 import polars as pl
 import os
 from polyfactory.factories.pydantic_factory import ModelFactory
-
+from service import S3Service
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     try:
-        # TODO: try open daily /houerly parquet for schema
+        # TODO: try open daily /hourly parquet for schema
         # _app.polars_iced_data = pl.read_parquet("polars_iced_data_1.parquet")
         _app.polars_iced_data = pl.DataFrame(schema={"ingest": pl.Int64, "saffire": pl.String})
         # print(f"{_app.polars_iced_data.count()=}")
@@ -50,6 +50,39 @@ async def polars_iced_data(data: list[PolarsIcedSchema], request: Request):
 
     return {"message": "Data frozen in ice cube"}
 
+
+@app.post("/v1/dump_iced_data")
+async def dump_iced_data(request: Request, s3: S3Service = Depends()):
+    # session = await s3.s3fs_client.set_session()
+    #
+    # async with session as s3_session:
+    #     s3_session.put(Bucket="ice-cube", Key="polars_iced_data_1.parquet", Body=request.app.polars_iced_data.write_parquet())
+
+
+    request.app.polars_iced_data.write_parquet("polars_iced_data_1.parquet")
+
+    # s3.s3fs_client
+    from io import BytesIO
+    _b = BytesIO()
+    request.app.polars_iced_data.write_parquet(_b)
+    _b.seek(0)
+    _res = await s3.s3fs_client._lsbuckets()
+    await s3.s3fs_client._touch(
+        path="daily/polars_iced_data_1.parquet",
+        Body=_b.getvalue()
+    )
+
+
+
+    # _ses = await s3.s3fs_client.set_session()
+    # print(f"{dir(_ses)=}")
+    print(f"{dir()=}")
+    print(f"{dir(s3.s3fs_client)=}")
+    # _ses.put_object(Bucket="ice-cube", Key="polars_iced_data_1.parquet", Body=request.app.polars_iced_data.write_parquet())
+    # # await _ses.put(Bucket="daily", Key="polars_iced_data_1.parquet", Body=request.app.polars_iced_data.write_parquet())
+
+
+    return {"message": _res}
 
 
 # TODO: endpoint to post dataframe to s3
