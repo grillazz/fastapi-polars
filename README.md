@@ -15,3 +15,6 @@ So what problem I will going to solver.
 - by adding polars dataframe as in-memory sink - framework is delivering no latency data 
   storage based on parquet files which is transported to s3 as persistence layer in scheduled or adhoc steps
 - main goal was simplicity and low cost of usage
+
+on s3 we use merge to merge files for same dataframe for same day from different k8s nodes with gateway
+or maybe better is to open then in one polars operation / sort / write to new parquet ?

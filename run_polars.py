@@ -2,19 +2,20 @@ from fastapi import FastAPI, Request, Depends
 from contextlib import asynccontextmanager
 import polars as pl
 import os
-from schema.pydantic import PolarsIcedSchema
-from service.s3 import S3Service
+from schemas.pydantic import PolarsIcedSchema
+from schemas.polars import pl_iced_schema
+from services.s3 import S3Service
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     try:
-        # TODO: try open daily /hourly parquet for schema > ready only max datetime for current date
+        # TODO: try open daily /hourly parquet for schemas > ready only max datetime for current date
         # _app.polars_iced_data = pl.read_parquet("polars_iced_data_1.parquet")
-        _app.polars_iced_data = pl.DataFrame(schema={"ingest": pl.Int64, "saffire": pl.String})
+        _app.polars_iced_data = pl.DataFrame(schema=pl_iced_schema)
         # print(f"{_app.polars_iced_data.count()=}")
         yield
     except FileNotFoundError:
-        _app.polars_iced_data = pl.DataFrame(schema={"ingest": pl.Int64, "saffire": pl.String})
+        _app.polars_iced_data = pl.DataFrame(schema=pl_iced_schema)
         # _app.polars_iced_data = UberDataFrame().df
         yield
     finally:
