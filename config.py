@@ -1,4 +1,3 @@
-import logging
 import os
 
 from pydantic import (
@@ -6,9 +5,6 @@ from pydantic import (
     AnyHttpUrl,
 )
 from pydantic_settings import BaseSettings
-
-logger = logging.getLogger(__name__)
-
 
 class S3Credentials(BaseModel):
     endpoint_url: AnyHttpUrl = os.getenv("S3_ENDPOINT_URL", "http://localhost:9000")

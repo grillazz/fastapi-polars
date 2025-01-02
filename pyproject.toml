@@ -1,8 +1,8 @@
 [tool.poetry]
 name = "fastapi-polars"
-version = "0.1.0"
+version = "0.2.0"
 description = ""
-authors = ["Your Name <you@example.com>"]
+authors = ["Jakub Miazek <the@grillazz.com>"]
 readme = "README.md"
 package-mode = false
 

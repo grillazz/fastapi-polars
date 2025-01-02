@@ -49,5 +49,3 @@ class S3Service(metaclass=SingletonMetaNoArgs):
             endpoint_url=self.s3_url,
             asynchronous=True
         )
-
-

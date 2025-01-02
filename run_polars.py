@@ -1,15 +1,14 @@
 from fastapi import FastAPI, Request, Depends
 from contextlib import asynccontextmanager
-from pydantic import BaseModel
 import polars as pl
 import os
-from polyfactory.factories.pydantic_factory import ModelFactory
-from service import S3Service
+from schema.pydantic import PolarsIcedSchema
+from service.s3 import S3Service
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     try:
-        # TODO: try open daily /hourly parquet for schema
+        # TODO: try open daily /hourly parquet for schema > ready only max datetime for current date
         # _app.polars_iced_data = pl.read_parquet("polars_iced_data_1.parquet")
         _app.polars_iced_data = pl.DataFrame(schema={"ingest": pl.Int64, "saffire": pl.String})
         # print(f"{_app.polars_iced_data.count()=}")
@@ -28,13 +27,6 @@ async def root(request: Request):
     _c = request.app.polars_iced_data.count()
     return {"message": f"Welcome to Polars Iced API {_c=}"}
 
-
-class PolarsIcedSchema(BaseModel):
-    ingest: int
-    saffire: str
-
-class PolarsIcedFactory(ModelFactory[PolarsIcedSchema]):
-    __model__ = PolarsIcedSchema
 
 @app.post("/v1/polars_ice_data")
 async def polars_iced_data(data: list[PolarsIcedSchema], request: Request):
@@ -90,3 +82,6 @@ async def dump_iced_data(request: Request, s3: S3Service = Depends()):
 # TODO: scheduler only sent POST to this endpoint in defined time
 
 # TODO: endpoint to read / scan parquet from s3
+
+# TODO: validate dataframe before save with great expectations
+
