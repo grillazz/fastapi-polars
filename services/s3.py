@@ -1,9 +1,12 @@
+import io
+
+from aiobotocore.session import AioBaseClient
 from attrs import define, field
 
 from threading import Lock
 
 import s3fs
-
+import polars as pl
 from config import settings as global_settings
 
 
@@ -25,16 +28,6 @@ class SingletonMetaNoArgs(type):
         return cls._instances[cls]
 
 
-# async def run_program():
-#     s3 = S3FileSystem(..., asynchronous=True)
-#     session = await s3.set_session()
-#     ...  # perform work
-#     await session.close()
-#
-# asyncio.run(run_program())  # or call from your async code
-
-
-
 @define
 class S3Service(metaclass=SingletonMetaNoArgs):
     s3_key: str = global_settings.s3_credentials.key
@@ -49,3 +42,13 @@ class S3Service(metaclass=SingletonMetaNoArgs):
             endpoint_url=self.s3_url,
             asynchronous=True
         )
+
+    async def materialize_dataframe(self, dataframe: pl.DataFrame, path: str):
+        session = await self.s3fs_client.set_session()
+        _parquet_as_bytes = io.BytesIO()
+        dataframe.write_parquet(_parquet_as_bytes)
+        obj = await session.put_object(Bucket="daily", Key=path, Body=_parquet_as_bytes.getvalue())
+        await session.close()
+        # print(f"{dir(session)=}")
+        # print(f"{type(session)=}")
+        return {f"{obj=}"}
