@@ -89,3 +89,5 @@ async def materialize_iced_data_v2(request: Request):
 
 # TODO: validate dataframe before save with great expectations
 
+# TODO: scheduler should only hit endpoints to start materialize actions
+#  and scheduler should have api to configure jobs
