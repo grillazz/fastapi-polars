@@ -1,6 +1,5 @@
 import io
 
-from aiobotocore.session import AioBaseClient
 from attrs import define, field
 
 from threading import Lock
