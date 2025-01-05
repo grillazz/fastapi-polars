@@ -18,8 +18,9 @@ async def lifespan(_app: FastAPI):
     try:
         # TODO: try open daily /hourly parquet for schemas > ready only max datetime for current date
         # _app.polars_iced_data = pl.read_parquet("polars_iced_data_1.parquet")
-
-        _app.polars_iced_data = pl.DataFrame(schema=pl_iced_schema)
+        # TODO: iterate over schemas to create dataframes for every schema
+        _app.__setattr__("polars_iced_data", pl.DataFrame(schema=pl_iced_schema))
+        # _app.polars_iced_data = pl.DataFrame(schema=pl_iced_schema)
         _app.polars_iced_data_dump = pl.DataFrame(schema=pl_iced_schema)
         # print(f"{_app.polars_iced_data.count()=}")
         yield
@@ -44,9 +45,12 @@ async def lifespan(_app: FastAPI):
 app = FastAPI(title="Polars Iced API", version="0.0.1", lifespan=lifespan)
 @app.get("/")
 async def root(request: Request):
-    _c = request.app.polars_iced_data.count()
-    return {"message": f"Welcome to Polars Iced API {_c=}"}
-
+    try:
+        _c = request.app.polars_iced_data.count()
+        return {"message": f"Welcome to Polars Iced API {_c=}"}
+    except AttributeError:
+        # TODO: inform user if dataframe not yet exists
+        return {"message": "Welcome to Polars Iced API"}
 
 @app.post("/v1/polars_ice_data")
 async def polars_iced_data(data: list[PolarsIcedSchema], request: Request):

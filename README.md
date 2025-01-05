@@ -18,3 +18,14 @@ So what problem I will going to solver.
 
 on s3 we use merge to merge files for same dataframe for same day from different k8s nodes with gateway
 or maybe better is to open then in one polars operation / sort / write to new parquet ?
+
+
+1.Setup local env with uv > link to astral
+1a. Setup with uvicorn
+1b. Setup with fastapi
+1c. Setup with docker
+1d. Setup with k8s
+
+
+Query dataframe which is attached to request via polars live using pyodies or jupyter with websockets from front end
+mayeb access to python kernel with kernel gateway like in guardian project
