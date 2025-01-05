@@ -1,5 +1,6 @@
 import io
 
+from whenever import Instant, Date
 from fastapi import FastAPI, Request, Depends
 from contextlib import asynccontextmanager
 import polars as pl
@@ -9,13 +10,15 @@ from schemas.polars import pl_iced_schema
 from services.s3 import S3Service
 from io import BytesIO
 
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    _app.s3 = S3Service()
+    _app.s3.s3fs_client.session = await _app.s3.s3fs_client.set_session()
     try:
         # TODO: try open daily /hourly parquet for schemas > ready only max datetime for current date
         # _app.polars_iced_data = pl.read_parquet("polars_iced_data_1.parquet")
-        _app.s3 = S3Service()
-        _app.s3.s3fs_client.session = await _app.s3.s3fs_client.set_session()
+
         _app.polars_iced_data = pl.DataFrame(schema=pl_iced_schema)
         _app.polars_iced_data_dump = pl.DataFrame(schema=pl_iced_schema)
         # print(f"{_app.polars_iced_data.count()=}")
@@ -28,7 +31,11 @@ async def lifespan(_app: FastAPI):
         print(f"{_app.polars_iced_data.count()=}")
         _parquet_as_bytes = io.BytesIO()
         _app.polars_iced_data.write_parquet(_parquet_as_bytes)
-        await _app.s3.s3fs_client.session.put_object(Bucket="daily", Key=f"polars_iced_data_{str(os.getpid())}.parquet", Body=_parquet_as_bytes.getvalue())
+        await _app.s3.s3fs_client.session.put_object(
+            Bucket="daily",
+            Key=f"polars_iced_data_{str(Instant.now().py_datetime().strftime("%Y%m%d"))}.parquet",
+            Body=_parquet_as_bytes.getvalue()
+        )
         await _app.s3.s3fs_client.session.close()
 
 
@@ -91,3 +98,5 @@ async def materialize_iced_data_v2(request: Request):
 
 # TODO: scheduler should only hit endpoints to start materialize actions
 #  and scheduler should have api to configure jobs
+
+# TODO: dynamic schemas with JSON_TABLE via postgresql in table we can have dataframe name and its schema
