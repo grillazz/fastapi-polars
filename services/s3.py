@@ -42,7 +42,7 @@ class S3Service(metaclass=SingletonMetaNoArgs):
             asynchronous=True
         )
 
-    async def strmaterialize_dataframe(self, dataframe: pl.DataFrame, path: str):
+    async def materialize_dataframe(self, dataframe: pl.DataFrame, path: str):
         session = await self.s3fs_client.set_session()
         _parquet_as_bytes = io.BytesIO()
         dataframe.write_parquet(_parquet_as_bytes)

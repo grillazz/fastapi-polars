@@ -17,18 +17,15 @@ async def lifespan(_app: FastAPI):
     _app.s3.s3fs_client.session = await _app.s3.s3fs_client.set_session()
     try:
         # TODO: try open daily /hourly parquet for schemas > ready only max datetime for current date
-        # _app.polars_iced_data = pl.read_parquet("polars_iced_data_1.parquet")
         # TODO: iterate over schemas to create dataframes for every schema
-        _app.__setattr__("polars_iced_data", pl.DataFrame(schema=pl_iced_schema))
-        # _app.polars_iced_data = pl.DataFrame(schema=pl_iced_schema)
-        _app.polars_iced_data_dump = pl.DataFrame(schema=pl_iced_schema)
-        # print(f"{_app.polars_iced_data.count()=}")
+        # _app.__setattr__("polars_iced_data", pl.DataFrame(schema=pl_iced_schema))
+        # _app.polars_iced_data_dump = pl.DataFrame(schema=pl_iced_schema)
         yield
     except FileNotFoundError:
-        _app.polars_iced_data = pl.DataFrame(schema=pl_iced_schema)
-        # _app.polars_iced_data = UberDataFrame().df
+        # _app.polars_iced_data = pl.DataFrame(schema=pl_iced_schema)
         yield
     finally:
+        # TODO: iter over every element in app.polars and dump in in case of server failuer or accidental shutdown
         print(f"{_app.polars_iced_data.count()=}")
         _parquet_as_bytes = io.BytesIO()
         _app.polars_iced_data.write_parquet(_parquet_as_bytes)
@@ -46,7 +43,7 @@ app = FastAPI(title="Polars Iced API", version="0.0.1", lifespan=lifespan)
 @app.get("/")
 async def root(request: Request):
     try:
-        _c = request.app.polars_iced_data.count()
+        _c = request.app.polars_iced_data.estimated_size()
         return {"message": f"Welcome to Polars Iced API {_c=}"}
     except AttributeError:
         # TODO: inform user if dataframe not yet exists
@@ -55,8 +52,13 @@ async def root(request: Request):
 @app.post("/v1/polars_ice_data")
 async def polars_iced_data(data: list[PolarsIcedSchema], request: Request):
     # TODO: cProfile below line for best performance
+    # TODO: setup limis when dataframe will be dumped to parquet automatically and memory will be free-up
     _ice_cube = pl.DataFrame([_d.__dict__ for _d in data])
-    request.app.polars_iced_data.extend(_ice_cube)
+    # TODO: it should be created with date in name ?
+    request.app.__setattr__("polars_iced_data", pl.DataFrame(schema=pl_iced_schema))
+    # TODO: if dataframe to big not exten d but dump clear in append to new
+    request.app.__getattribute__("polars_iced_data1").extend(_ice_cube)
+    # request.app.polars_iced_data.extend(_ice_cube)
     return {"message": "Data frozen in ice cube"}
 
 
@@ -104,3 +106,7 @@ async def materialize_iced_data_v2(request: Request):
 #  and scheduler should have api to configure jobs
 
 # TODO: dynamic schemas with JSON_TABLE via postgresql in table we can have dataframe name and its schema
+
+
+
+# TODO: 1 save to avro and at the end of day read avro and covert to parquet :P
