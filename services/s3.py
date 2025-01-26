@@ -50,16 +50,5 @@ class S3Service(metaclass=SingletonMetaNoArgs):
             Bucket="daily", Key=path, Body=_parquet_as_bytes.getvalue()
         )
         await session.close()
-        print(f"{dir(session)=}")
-        print(f"{type(session)=}")
-        return {f"{obj=}"}
+        return obj
 
-    async def write_avro(self, dataframe: pl.DataFrame, path: str):
-        session = await self.s3fs_client.set_session()
-        _avro_as_bytes = io.BytesIO()
-        dataframe.write_avro(_avro_as_bytes)
-        obj = await session.put_object(
-            Bucket="daily", Key=path, Body=_avro_as_bytes.getvalue()
-        )
-        await session.close()
-        return {f"{obj=}"}
