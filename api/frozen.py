@@ -1,6 +1,4 @@
-import itertools
 from fastapi import Request, APIRouter, Depends
-from whenever import Instant
 
 from schemas.pydantic import PolarsIcedSchema
 from schemas.polars import pl_iced_schema
@@ -30,10 +28,10 @@ async def froze_data_in_frame(
         data (list[PolarsIcedSchema]): List of data items to be added to the DataFrame.
         request (Request): The FastAPI request object.
         s3 (S3Service): The S3 service dependency.
+        filename_generator (FilenameGeneratorService): The filename generator service dependency.
 
     Returns:
         dict: A message indicating the data has been frozen.
-        :param filename_generator:
     """
     _ice_cube = pl.DataFrame(
         [_d.__dict__ for _d in data]
@@ -66,7 +64,6 @@ async def froze_data_in_frame(
 
     return {"message": "Data frozen in ice cube"}  # Return a success message
 
-
 @router.post("/v1/materialize_iced_data")
 async def materialize_iced_data(
     request: Request,
@@ -75,8 +72,19 @@ async def materialize_iced_data(
         get_filename_generator_service
     ),
 ):
+    """
+    Endpoint to materialize the iced data stored in the application state to S3.
+
+    Args:
+        request (Request): The FastAPI request object.
+        s3 (S3Service): The S3 service dependency.
+        filename_generator (FilenameGeneratorService): The filename generator service dependency.
+
+    Returns:
+        dict: A message indicating the result of the materialization process.
+    """
     _file = (
         await filename_generator.generate_filename()
     )  # Generate a filename for the dump
-    _res = await s3.materialize_dataframe(request.app.polars_iced_data, _file)
-    return {"message": _res}
+    _res = await s3.materialize_dataframe(request.app.polars_iced_data, _file)  # Materialize the DataFrame to S3
+    return {"message": _res}  # Return the result message
