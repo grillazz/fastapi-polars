@@ -16,9 +16,12 @@ class FilenameGeneratorService(metaclass=SingletonMeta):
         sequence (itertools.count): The sequence counter starting from 1.
         current_date (str): The current date in 'YYYYMMDD' format.
     """
+
     base_name: str
     sequence: itertools.count = field(init=False, factory=lambda: itertools.count(1))
-    current_date: str = field(init=False, factory=lambda: Instant.now().py_datetime().strftime("%Y%m%d"))
+    current_date: str = field(
+        init=False, factory=lambda: Instant.now().py_datetime().strftime("%Y%m%d")
+    )
 
     async def generate_filename(self):
         """
@@ -32,6 +35,7 @@ class FilenameGeneratorService(metaclass=SingletonMeta):
             self.current_date = new_date
             self.sequence = itertools.count(1)
         return f"{self.base_name}_{self.current_date}_{next(self.sequence):03}.parquet"
+
 
 def get_filename_generator_service() -> FilenameGeneratorService:
     """

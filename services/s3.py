@@ -5,6 +5,7 @@ from attrs import define, field
 from config import settings as global_settings
 from services.utlis import SingletonMetaNoArgs
 
+
 @define
 class S3Service(metaclass=SingletonMetaNoArgs):
     """
@@ -16,6 +17,7 @@ class S3Service(metaclass=SingletonMetaNoArgs):
         s3_url (str): S3 endpoint URL.
         s3fs_client (s3fs.S3FileSystem): S3 filesystem client.
     """
+
     s3_key: str = global_settings.s3_credentials.key
     s3_secret: str = global_settings.s3_credentials.secret
     s3_url: str = global_settings.s3_credentials.endpoint_url
