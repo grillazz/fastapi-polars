@@ -6,5 +6,6 @@ class PolarsIcedSchema(BaseModel):
     ingest: int
     saffire: str
 
+
 class PolarsIcedFactory(ModelFactory[PolarsIcedSchema]):
     __model__ = PolarsIcedSchema

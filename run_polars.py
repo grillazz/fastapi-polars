@@ -31,15 +31,15 @@ async def lifespan(_app: FastAPI):
         _app.polars_iced_data.write_parquet(_parquet_as_bytes)
         await _app.s3.s3fs_client.session.put_object(
             Bucket="daily",
-            Key=f"polars_iced_data_{str(Instant.now().py_datetime().strftime("%Y%m%d"))}.parquet",
-            Body=_parquet_as_bytes.getvalue()
+            Key=f"polars_iced_data_{str(Instant.now().py_datetime().strftime('%Y%m%d'))}.parquet",
+            Body=_parquet_as_bytes.getvalue(),
         )
         await _app.s3.s3fs_client.session.close()
 
 
-
-
 app = FastAPI(title="Polars Iced API", version="0.0.1", lifespan=lifespan)
+
+
 @app.get("/")
 async def root(request: Request):
     try:
@@ -48,6 +48,7 @@ async def root(request: Request):
     except AttributeError:
         # TODO: inform user if dataframe not yet exists
         return {"message": "Welcome to Polars Iced API"}
+
 
 @app.post("/v1/polars_ice_data")
 async def polars_iced_data(data: list[PolarsIcedSchema], request: Request):
@@ -67,16 +68,18 @@ async def dump_iced_data(request: Request, s3: S3Service = Depends()):
     _b = BytesIO()
     request.app.polars_iced_data.write_parquet(_b)
     _obj = await s3.s3fs_client._touch(
-        path="daily/polars_iced_data_1.parquet",
-        Body=_b.getvalue()
+        path="daily/polars_iced_data_1.parquet", Body=_b.getvalue()
     )
     return {"message": _obj}
 
 
 @app.post("/v1/materialize_iced_data")
 async def materialize_iced_data(request: Request, s3: S3Service = Depends()):
-    _res = await s3.materialize_dataframe(request.app.polars_iced_data, "polars_iced_data_2.parquet")
+    _res = await s3.materialize_dataframe(
+        request.app.polars_iced_data, "polars_iced_data_2.parquet"
+    )
     return {"message": _res}
+
 
 @app.post("/v2/materialize_iced_data")
 async def materialize_iced_data_v2(request: Request):
@@ -85,10 +88,13 @@ async def materialize_iced_data_v2(request: Request):
     request.app.polars_iced_data_dump = request.app.polars_iced_data.clone()
     request.app.polars_iced_data_dump.write_parquet(_parquet_as_bytes)
     _res = await request.app.s3.s3fs_client.session.put_object(
-        Bucket="daily", Key="polars_iced_data_3.parquet", Body=_parquet_as_bytes.getvalue()
+        Bucket="daily",
+        Key="polars_iced_data_3.parquet",
+        Body=_parquet_as_bytes.getvalue(),
     )
     request.app.polars_iced_data_dump.clear()
     return {"message": _res}
+
 
 # TODO: add middleware which will be adding new df per router if they not exists
 
@@ -106,7 +112,6 @@ async def materialize_iced_data_v2(request: Request):
 #  and scheduler should have api to configure jobs
 
 # TODO: dynamic schemas with JSON_TABLE via postgresql in table we can have dataframe name and its schema
-
 
 
 # TODO: 1 save to avro and at the end of day read avro and covert to parquet :P

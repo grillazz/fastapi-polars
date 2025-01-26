@@ -39,15 +39,27 @@ class S3Service(metaclass=SingletonMetaNoArgs):
             key=self.s3_key,
             secret=self.s3_secret,
             endpoint_url=self.s3_url,
-            asynchronous=True
+            asynchronous=True,
         )
 
     async def materialize_dataframe(self, dataframe: pl.DataFrame, path: str):
         session = await self.s3fs_client.set_session()
         _parquet_as_bytes = io.BytesIO()
         dataframe.write_parquet(_parquet_as_bytes)
-        obj = await session.put_object(Bucket="daily", Key=path, Body=_parquet_as_bytes.getvalue())
+        obj = await session.put_object(
+            Bucket="daily", Key=path, Body=_parquet_as_bytes.getvalue()
+        )
         await session.close()
-        # print(f"{dir(session)=}")
-        # print(f"{type(session)=}")
+        print(f"{dir(session)=}")
+        print(f"{type(session)=}")
+        return {f"{obj=}"}
+
+    async def write_avro(self, dataframe: pl.DataFrame, path: str):
+        session = await self.s3fs_client.set_session()
+        _avro_as_bytes = io.BytesIO()
+        dataframe.write_avro(_avro_as_bytes)
+        obj = await session.put_object(
+            Bucket="daily", Key=path, Body=_avro_as_bytes.getvalue()
+        )
+        await session.close()
         return {f"{obj=}"}
