@@ -1,3 +1,4 @@
+import os
 import itertools
 from whenever import Instant
 from attrs import define, field
@@ -34,7 +35,7 @@ class FilenameGeneratorService(metaclass=SingletonMeta):
         if new_date != self.current_date:
             self.current_date = new_date
             self.sequence = itertools.count(1)
-        return f"{self.base_name}_{self.current_date}_{next(self.sequence):03}.parquet"
+        return f"{self.base_name}_{self.current_date}_{str(os.getpid())}_{next(self.sequence):03}.parquet"
 
 
 def get_filename_generator_service() -> FilenameGeneratorService:

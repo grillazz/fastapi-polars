@@ -1,3 +1,4 @@
+import os
 from fastapi import Request, APIRouter, Depends
 
 from schemas.pydantic import PolarsIcedSchema
@@ -34,7 +35,7 @@ async def froze_data_in_frame(
         dict: A message indicating the data has been frozen.
     """
     _ice_cube = pl.DataFrame(
-        [_d.__dict__ for _d in data]
+        [{**_d.__dict__, "pid": str(os.getpid())} for _d in data]
     )  # Convert input data to a Polars DataFrame
     if not hasattr(request.app, "polars_iced_data"):
         request.app.__setattr__(
@@ -47,20 +48,16 @@ async def froze_data_in_frame(
         request.app.__getattribute__("polars_iced_data").estimated_size(unit="mb")
         > global_settings.dataframe_dump_size
     ):
-        dataframe_dump = request.app.__getattribute__(
-            "polars_iced_data"
-        ).clone()  # Clone the DataFrame for dumping
         _file = (
-            await filename_generator.generate_filename()
+                    await filename_generator.generate_filename()
         )  # Generate a filename for the dump
-        _res = await s3.materialize_dataframe(
-            dataframe_dump, _file
-        )  # Materialize the DataFrame to S3
+
+        _res = s3.materialize_dataframe(
+                    request.app.__getattribute__("polars_iced_data"), _file
+        )  # Materialize the DataFrame to S3, Make this function synchronous and blocking on IO.
+           # Other coroutines will naturally wait for it to complete.
         if _res:
-            dataframe_dump.clear()  # Clear the cloned DataFrame
-            request.app.__getattribute__(
-                "polars_iced_data"
-            ).clear()  # Clear the DataFrame in app state
+            delattr(request.app, "polars_iced_data")  # Clear the DataFrame
 
     return {"message": "Data frozen in ice cube"}  # Return a success message
 
@@ -86,5 +83,6 @@ async def materialize_iced_data(
     _file = (
         await filename_generator.generate_filename()
     )  # Generate a filename for the dump
-    _res = await s3.materialize_dataframe(request.app.polars_iced_data, _file)  # Materialize the DataFrame to S3
+    _df = request.app.polars_iced_data
+    _res = s3.materialize_dataframe(_df, _file)  # Materialize the DataFrame to S3
     return {"message": _res}  # Return the result message
