@@ -86,3 +86,24 @@ async def materialize_iced_data(
     _df = request.app.polars_iced_data
     _res = s3.materialize_dataframe(_df, _file)  # Materialize the DataFrame to S3
     return {"message": _res}  # Return the result message
+
+
+@router.post("/v1/merge_parquet_files")
+async def merge_parquet_files(
+    s3: S3Service = Depends(),
+):
+    """
+    Endpoint to merge Parquet files stored in the specified S3 bucket.
+
+    Args:
+        s3 (S3Service): The S3 service dependency.
+
+    Returns:
+        dict: A message indicating the result of the merge operation.
+    """
+    # try to remove daily.parquet if exists
+    if s3.parquet_file_exists("daily/daily.parquet"):
+         s3.delete_parquet_file("daily/daily.parquet")
+    _df = s3.merge_parquet_files("daily")  # Merge Parquet files in the "daily" bucket into a single DataFrame
+    _res = s3.materialize_dataframe(_df, "daily.parquet")  # Materialize the DataFrame to S3
+    return {"message": _res}  # Return the result message
