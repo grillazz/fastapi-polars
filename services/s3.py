@@ -109,3 +109,12 @@ class S3Service(metaclass=SingletonMetaNoArgs):
         parquet_files = self.list_parquet_files(bucket)
         dataframes = [self.read_parquet_file(f) for f in parquet_files]
         return pl.concat(dataframes)
+
+    def list_buckets(self) -> list:
+        """
+        Lists all available buckets in the S3 storage.
+
+        Returns:
+            list: A list of bucket names.
+        """
+        return self.s3fs_client.ls('/')

@@ -107,3 +107,18 @@ async def merge_parquet_files(
     _df = s3.merge_parquet_files("daily")  # Merge Parquet files in the "daily" bucket into a single DataFrame
     _res = s3.materialize_dataframe(_df, "daily.parquet")  # Materialize the DataFrame to S3
     return {"message": _res}  # Return the result message
+
+
+@router.get("/v1/list_buckets")
+async def list_buckets(s3: S3Service = Depends()):
+    """
+    Endpoint to list all available buckets in the S3 storage.
+
+    Args:
+        s3 (S3Service): The S3 service dependency.
+
+    Returns:
+        dict: A dictionary containing the list of bucket names.
+    """
+    buckets = s3.list_buckets()
+    return {"buckets": buckets}
