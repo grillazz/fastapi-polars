@@ -1,6 +1,6 @@
 # fastapi-polars
 
-## Problems to Solve
+## Problem to Solve
 
 Parquet is a highly useful and popular format for storing data in one place. However, it has one key limitation: extending an existing Parquet file is not straightforward.
 
@@ -15,16 +15,6 @@ The FastAPI-Polars project aims to provide a fast, simple, and cost-effective so
 - **Simplicity and Low Cost**: The main goal is to achieve simplicity and low cost of usage.
 
 On S3, the project uses merge operations to combine files for the same DataFrame for the same day from different Kubernetes nodes with a gateway. Alternatively, it can open them in one Polars operation, sort, and write to a new Parquet file.
-
-## Setup Instructions
-
-1. **Setup Local Environment with Uvicorn**
-   - [Link to Astral](#)
-
-1a. **Setup with Uvicorn**
-1b. **Setup with FastAPI**
-1c. **Setup with Docker**
-1d. **Setup with Kubernetes**
 
 ### FastAPI-Polars Project
 
