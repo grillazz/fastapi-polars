@@ -49,17 +49,18 @@ async def froze_data_in_frame(
         > global_settings.dataframe_dump_size
     ):
         _file = (
-                    await filename_generator.generate_filename()
+            await filename_generator.generate_filename()
         )  # Generate a filename for the dump
 
         _res = s3.materialize_dataframe(
-                    request.app.__getattribute__("polars_iced_data"), _file
+            request.app.__getattribute__("polars_iced_data"), _file
         )  # Materialize the DataFrame to S3, Make this function synchronous and blocking on IO.
-           # Other coroutines will naturally wait for it to complete.
+        # Other coroutines will naturally wait for it to complete.
         if _res:
             delattr(request.app, "polars_iced_data")  # Clear the DataFrame
 
     return {"message": "Data frozen in ice cube"}  # Return a success message
+
 
 @router.post("/v1/materialize_iced_data")
 async def materialize_iced_data(
@@ -103,9 +104,13 @@ async def merge_parquet_files(
     """
     # try to remove daily.parquet if exists
     if s3.parquet_file_exists("daily/daily.parquet"):
-         s3.delete_parquet_file("daily/daily.parquet")
-    _df = s3.merge_parquet_files("daily")  # Merge Parquet files in the "daily" bucket into a single DataFrame
-    _res = s3.materialize_dataframe(_df, "daily.parquet")  # Materialize the DataFrame to S3
+        s3.delete_parquet_file("daily/daily.parquet")
+    _df = s3.merge_parquet_files(
+        "daily"
+    )  # Merge Parquet files in the "daily" bucket into a single DataFrame
+    _res = s3.materialize_dataframe(
+        _df, "daily.parquet"
+    )  # Materialize the DataFrame to S3
     return {"message": _res}  # Return the result message
 
 

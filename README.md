@@ -26,10 +26,6 @@ On S3, the project uses merge operations to combine files for the same DataFrame
 1c. **Setup with Docker**
 1d. **Setup with Kubernetes**
 
-## Query DataFrame
-
-Query the DataFrame attached to the request via Polars live using Pyodide or Jupyter with WebSockets from the front end. Alternatively, access the Python kernel with a kernel gateway like in the Guardian project.
-
 ### FastAPI-Polars Project
 
 #### 1. Architecture
@@ -142,3 +138,8 @@ Open your browser and navigate to `http://localhost:8000/docs` to access the aut
 
 ### Summary
 You have now set up the FastAPI-Polars project with MinIO for S3-compatible storage. The project is ready for data ingestion, processing, and analytics using FastAPI and Polars.
+
+## Query DataFrame
+
+TODO: Query the DataFrame attached to the request via Polars live using Pyodide or Jupyter with WebSockets from the front end. Alternatively, access the Python kernel with a kernel gateway like in the Guardian project.
+

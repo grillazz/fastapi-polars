@@ -19,9 +19,7 @@ class PerformanceTests(HttpUser):
             )
             for _ in range(600)
         ]
-        # print(payload)
         headers = {"Accept": "application/json", "Content-Type": "application/json"}
-        res = self.client.post(
+        self.client.post(
             "/frozen/v1/polars/froze_data_in_frame", json=payload, headers=headers
         )
-        # print("res", res.json())
