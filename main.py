@@ -1,19 +1,7 @@
 from fastapi import FastAPI, Request
 
-from api.frozen import router as frozen_router
+from api.frozen import router as ursa_router
 
-app = FastAPI(title="Polars Iced API", version="0.0.1")
+app = FastAPI(title="Ursa Rest API", version="0.1.0")
 
-
-@app.get("/")
-async def root(request: Request):
-    try:
-        _s = request.app.polars_iced_data.estimated_size(unit="mb")
-        _c = request.app.polars_iced_data.get_column("ingest").count()
-        return {"message": f"Welcome to Polars Iced API {_s=} {_c=}"}
-    except AttributeError:
-        # TODO: inform user if dataframe not yet exists
-        return {"message": "Welcome to Polars Iced API"}
-
-
-app.include_router(frozen_router, prefix="/frozen", tags=["frozen"])
+app.include_router(ursa_router, prefix="/ursa")

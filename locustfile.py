@@ -21,5 +21,5 @@ class PerformanceTests(HttpUser):
         ]
         headers = {"Accept": "application/json", "Content-Type": "application/json"}
         self.client.post(
-            "/frozen/v1/polars/froze_data_in_frame", json=payload, headers=headers
+            "/frozen/v1/froze_data_in_frame", json=payload, headers=headers
         )

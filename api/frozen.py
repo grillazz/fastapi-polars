@@ -12,7 +12,32 @@ from config import settings as global_settings
 router = APIRouter()
 
 
-@router.post("/v1/polars/froze_data_in_frame")
+@router.get("/")
+async def root(request: Request):
+    """
+    Root endpoint to display a welcome message and information about the current DataFrame.
+
+    This endpoint checks if a DataFrame is stored in the application state under the name specified
+    in the global settings. If the DataFrame exists, it returns its estimated size and the count of
+    the 'ingest' column. If the DataFrame does not exist, it returns a message indicating that no
+    DataFrame is defined yet.
+
+    Args:
+        request (Request): The FastAPI request object.
+
+    Returns:
+        dict: A dictionary containing a welcome message and DataFrame information if available.
+    """
+    try:
+        dataframe = request.app.__getattribute__(global_settings.dataframe_name)
+        _s = dataframe.estimated_size(unit="mb")
+        _c = dataframe.get_column("ingest").count()
+        return {"message": f"Welcome to Ursa Rest API. {_s=} {_c=}"}
+    except AttributeError:
+        return {"message": "Welcome to Ursa Rest API. No dataframe defined yet."}
+
+
+@router.post("/v1/froze_data_in_frame")
 async def froze_data_in_frame(
     data: list[PolarsIcedSchema],
     request: Request,
@@ -37,15 +62,17 @@ async def froze_data_in_frame(
     _ice_cube = pl.DataFrame(
         [{**_d.__dict__, "pid": str(os.getpid())} for _d in data]
     )  # Convert input data to a Polars DataFrame
-    if not hasattr(request.app, "polars_iced_data"):
+    if not hasattr(request.app, global_settings.dataframe_name):
         request.app.__setattr__(
-            "polars_iced_data", pl.DataFrame(schema=pl_iced_schema)
+            global_settings.dataframe_name, pl.DataFrame(schema=pl_iced_schema)
         )  # Initialize DataFrame in app state if not present
-    request.app.__getattribute__("polars_iced_data").extend(
+    request.app.__getattribute__(global_settings.dataframe_name).extend(
         _ice_cube
     )  # Extend the existing DataFrame with new data
     if (
-        request.app.__getattribute__("polars_iced_data").estimated_size(unit="mb")
+        request.app.__getattribute__(global_settings.dataframe_name).estimated_size(
+            unit="mb"
+        )
         > global_settings.dataframe_dump_size
     ):
         _file = (
@@ -53,11 +80,11 @@ async def froze_data_in_frame(
         )  # Generate a filename for the dump
 
         _res = s3.materialize_dataframe(
-            request.app.__getattribute__("polars_iced_data"), _file
+            request.app.__getattribute__(global_settings.dataframe_name), _file
         )  # Materialize the DataFrame to S3, Make this function synchronous and blocking on IO.
         # Other coroutines will naturally wait for it to complete.
         if _res:
-            delattr(request.app, "polars_iced_data")  # Clear the DataFrame
+            delattr(request.app, global_settings.dataframe_name)  # Clear the DataFrame
 
     return {"message": "Data frozen in ice cube"}  # Return a success message
 
