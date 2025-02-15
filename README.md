@@ -60,8 +60,8 @@ The FastAPI-Polars project addresses several challenges:
 Sure, here is a step-by-step guide to set up the FastAPI-Polars project:
 
 ### 1. Prerequisites
-Ensure you have the following installed:
-- Python 3.7+
+Ensure you have the following installed for local development:
+- Python 3.13+
 - Docker
 - Docker Compose
 
@@ -80,57 +80,29 @@ S3_SECRET=your_s3_secret
 S3_ENDPOINT_URL=http://localhost:9000
 ```
 
-### 4. Set Up Docker Compose
-The `docker-compose.yaml` file is already configured to set up MinIO and create the necessary buckets. Ensure it looks like this:
-```yaml
-name: parquet_content_pump
-services:
-  minio:
-    container_name: minio
-    image: minio/minio:latest
-    ports:
-      - 9000:9000
-      - 9001:9001
-    volumes:
-      - datastore:/data
-    environment:
-      MINIO_ROOT_USER: minio
-      MINIO_ROOT_PASSWORD: minio123
-    command: server /data --console-address ":9001"
-
-  createbuckets:
-    image: minio/mc
-    depends_on:
-      - minio
-    entrypoint: >
-      /bin/sh -c "
-      /usr/bin/mc alias set myminio http://minio:9000 minio minio123;
-      /usr/bin/mc mb myminio/daily;
-      /usr/bin/mc anonymous set public myminio/daily;
-      exit 0;
-      "
-volumes:
-  datastore:
+### 4. Run local uvicorn with uv
+```shell
+(fastapi-polars) mac@mac fastapi-polars % uv run uvicorn main:app --host 0.0.0.0 --port 8000 --reload --loop uvloop --http httptools --log-level debug
+INFO:     Will watch for changes in these directories: ['/Users/waco/PycharmProjects/fastapi-polars']
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [2749] using WatchFiles
+INFO:     Started server process [2751]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     127.0.0.1:51509 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51509 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51512 - "GET /docs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51512 - "GET /openapi.json HTTP/1.1" 200 OK
 ```
 
-### 5. Build and Run Docker Containers
-Run the following command to build and start the Docker containers:
+### 4. Run S3 on MinIO with Docker Compose
+The `compose-s3.yaml` file is already configured to set up MinIO and create the necessary buckets. Run the following command to build and start the Docker containers:
 ```bash
-docker-compose up -d
-```
-
-### 6. Install Python Dependencies
-Create a virtual environment and install the required Python packages:
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows use `venv\Scripts\activate`
-pip install -r requirements.txt
-```
-
-### 7. Run the FastAPI Application
-Start the FastAPI application:
-```bash
-uvicorn main:app --reload
+(fastapi-polars) mac@mac fastapi-polars % docker compose -f compose-s3.yaml up -d
+[+] Running 3/3
+ ✔ Network parquet_content_pump_default            Created                                                                                                                                                                                    0.0s 
+ ✔ Container minio                                 Started                                                                                                                                                                                    0.3s 
+ ✔ Container parquet_content_pump-createbuckets-1  Started        
 ```
 
 ### 8. Access the API
@@ -140,6 +112,5 @@ Open your browser and navigate to `http://localhost:8000/docs` to access the aut
 You have now set up the FastAPI-Polars project with MinIO for S3-compatible storage. The project is ready for data ingestion, processing, and analytics using FastAPI and Polars.
 
 ## Query DataFrame
-
 TODO: Query the DataFrame attached to the request via Polars live using Pyodide or Jupyter with WebSockets from the front end. Alternatively, access the Python kernel with a kernel gateway like in the Guardian project.
 
