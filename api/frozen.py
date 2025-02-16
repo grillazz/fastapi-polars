@@ -32,9 +32,9 @@ async def root(request: Request):
         dataframe = request.app.__getattribute__(global_settings.dataframe_name)
         _s = dataframe.estimated_size(unit="mb")
         _c = dataframe.get_column("ingest").count()
-        return {"message": f"Welcome to Ursa Rest API. {_s=} {_c=}"}
+        return {"message": f"Welcome to Grizzly Rest API. {_s=} {_c=}"}
     except AttributeError:
-        return {"message": "Welcome to Ursa Rest API. No dataframe defined yet."}
+        return {"message": "Welcome to Grizzly Rest API. No dataframe defined yet."}
 
 
 @router.post("/v1/froze_data_in_frame")

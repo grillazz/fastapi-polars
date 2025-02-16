@@ -10,7 +10,7 @@ Additionally, Parquet files are often stored on S3, which is not highly responsi
 
 The FastAPI-Polars project aims to provide a fast, simple, and cost-effective solution to gather and store large volumes of data. The key features include:
 
-- **Ursa Framework**: Poc of big data framework to ingest, validate, and harmonize data using REST as the input protocol.
+- **Grizzly Framework**: Poc of big data framework to ingest, validate, and harmonize data using REST as the input protocol.
 - **Polars DataFrame**: Utilized as an in-memory sink, delivering low-latency data storage based on Parquet files, which are then transported to S3 as a persistence layer in scheduled or ad-hoc steps.
 - **Simplicity and Low Cost**: The main goal is to achieve simplicity and low cost of usage.
 

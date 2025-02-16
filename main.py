@@ -1,7 +1,7 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 
-from api.frozen import router as ursa_router
+from api.frozen import router as grizzly_router
 
-app = FastAPI(title="Ursa Rest API", version="0.1.0")
+app = FastAPI(title="Grizzly Rest API", version="0.1.0")
 
-app.include_router(ursa_router, prefix="/ursa")
+app.include_router(grizzly_router, prefix="/grizzly")
