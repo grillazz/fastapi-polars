@@ -1,5 +1,8 @@
 # fastapi-polars
 
+![fastapi-polars](/static/grizzly.jpg)
+photo: stephanie-davison
+
 ## Problem to Solve
 
 Parquet is a highly useful and popular format for storing data in one place. However, it has one key limitation: extending an existing Parquet file is not straightforward.
