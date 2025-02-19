@@ -120,3 +120,29 @@ class S3Service(metaclass=SingletonMetaNoArgs):
             list: A list of bucket names.
         """
         return self.s3fs_client.ls("/")
+
+
+    def create_bucket(self, bucket_name: str):
+        """
+        Creates a new bucket in the S3 storage.
+
+        Args:
+            bucket_name (str): The name of the bucket to be created.
+
+        Returns:
+            dict: A dictionary containing the status and bucket name.
+        """
+        self.s3fs_client.mkdir(bucket_name)
+        return {"status": "success", "bucket_name": bucket_name}
+
+    def list_files(self, bucket_name: str) -> list:
+        """
+        Lists all files in the specified S3 bucket.
+
+        Args:
+            bucket_name (str): The name of the bucket.
+
+        Returns:
+            list: A list of file paths in the bucket.
+        """
+        return self.s3fs_client.ls(bucket_name)

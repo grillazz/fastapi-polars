@@ -111,13 +111,13 @@ async def materialize_iced_data(
     _file = (
         await filename_generator.generate_filename()
     )  # Generate a filename for the dump
-    _df = request.app.polars_iced_data
+    _df = request.app.your_iced_data
     _res = s3.materialize_dataframe(_df, _file)  # Materialize the DataFrame to S3
     return {"message": _res}  # Return the result message
 
 
 @router.post("/v1/merge_parquet_files")
-async def merge_parquet_files(
+def merge_parquet_files(
     s3: S3Service = Depends(),
 ):
     """
@@ -142,7 +142,7 @@ async def merge_parquet_files(
 
 
 @router.get("/v1/list_buckets")
-async def list_buckets(s3: S3Service = Depends()):
+def list_buckets(s3: S3Service = Depends()):
     """
     Endpoint to list all available buckets in the S3 storage.
 
@@ -154,3 +154,34 @@ async def list_buckets(s3: S3Service = Depends()):
     """
     buckets = s3.list_buckets()
     return {"buckets": buckets}
+
+
+@router.post("/v1/create_bucket/{bucket_name}")
+def create_bucket(bucket_name: str, s3: S3Service = Depends()):
+    """
+    Endpoint to create a new bucket in the S3 storage.
+
+    Args:
+        bucket_name (str): The name of the bucket to be created.
+        s3 (S3Service): The S3 service dependency.
+
+    Returns:
+        dict: A dictionary containing the status and bucket name.
+    """
+    result = s3.create_bucket(bucket_name)
+    return result
+
+@router.get("/v1/list_files/{bucket_name}")
+def list_files(bucket_name: str, s3: S3Service = Depends()):
+    """
+    Endpoint to list all files in a specific S3 bucket.
+
+    Args:
+        bucket_name (str): The name of the bucket.
+        s3 (S3Service): The S3 service dependency.
+
+    Returns:
+        dict: A dictionary containing the list of file paths.
+    """
+    files = s3.list_files(bucket_name)
+    return {"files": files}
