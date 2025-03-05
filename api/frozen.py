@@ -4,9 +4,11 @@ from fastapi import Request, APIRouter, Depends
 from schemas.pydantic import PolarsIcedSchema
 from schemas.polars import pl_iced_schema
 import polars as pl
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from services.files import FilenameGeneratorService, get_filename_generator_service
 from services.s3 import S3Service
+from services.database import DatabaseService
 from config import settings as global_settings
 
 router = APIRouter()
@@ -96,6 +98,7 @@ async def materialize_iced_data(
     filename_generator: FilenameGeneratorService = Depends(
         get_filename_generator_service
     ),
+    db_session: DatabaseService = Depends(DatabaseService().get_db),
 ):
     """
     Endpoint to materialize the iced data stored in the application state to S3.
@@ -104,6 +107,7 @@ async def materialize_iced_data(
         request (Request): The FastAPI request object.
         s3 (S3Service): The S3 service dependency.
         filename_generator (FilenameGeneratorService): The filename generator service dependency.
+        db_session (DatabaseService): The database service dependency.
 
     Returns:
         dict: A message indicating the result of the materialization process.
@@ -113,7 +117,7 @@ async def materialize_iced_data(
     )  # Generate a filename for the dump
     _df = request.app.your_iced_data
     _res = s3.materialize_dataframe(_df, _file)  # Materialize the DataFrame to S3
-    return {"message": _res}  # Return the result message
+    return {"message": _res, "database": db_session.__str__()}  # Return the result message
 
 
 @router.post("/v1/merge_parquet_files")
