@@ -17,6 +17,7 @@ dependencies = [
     "pydantic-settings>=2.8.1",
     "ruff>=0.9.3",
     "s3fs>=2025.2.0",
+    "sqlalchemy>=2.0.38",
     "uvicorn>=0.34.0",
     "uvloop>=0.21.0",
     "whenever>=0.7.2",
