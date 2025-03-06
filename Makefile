@@ -1,9 +1,27 @@
 # Makefile
 
+# Variables
+HOST = 0.0.0.0
+PORT = 8000
+LOG_LEVEL = debug
+WORKERS = 8
+
+# Help command
+.PHONY: help
+help: ## Show this help
+	@egrep -h '\s##\s' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+
 # Run FastAPI with uvicorn
-run-uvicorn:
-	uv run uvicorn main:app --host 0.0.0.0 --port 8000 --reload --loop uvloop --http httptools --log-level debug
+.PHONY: run-uvicorn
+run-uvicorn: ## Run FastAPI with uvicorn
+	uv run uvicorn main:app --host $(HOST) --port $(PORT) --reload --loop uvloop --http httptools --log-level $(LOG_LEVEL)
 
+# Run FastAPI with granian
+.PHONY: run-granian
+run-granian: ## Run FastAPI with granian
+	uv run granian --interface asgi main:app --host $(HOST) --port $(PORT) --log-level $(LOG_LEVEL) --workers $(WORKERS)
 
-run-granian:
-	uv run granian --interface asgi main:app --host 0.0.0.0 --port 8000 --log-level debug --workers 8
+# Create new alembic database migration
+.PHONY: create-db-migration
+create-db-migration: ## Create new alembic database migration aka database revision.
+	uv run alembic revision --autogenerate -m "add parquet_index table" "$(msg)"
