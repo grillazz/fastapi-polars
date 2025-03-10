@@ -37,5 +37,5 @@ class DatabaseService:
         async with self.async_session_factory() as session:
             try:
                 yield session
-            except Exception as e:
+            except Exception:
                 raise

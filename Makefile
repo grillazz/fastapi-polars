@@ -21,7 +21,15 @@ run-uvicorn: ## Run FastAPI with uvicorn
 run-granian: ## Run FastAPI with granian
 	uv run granian --interface asgi main:app --host $(HOST) --port $(PORT) --log-level $(LOG_LEVEL) --workers $(WORKERS)
 
+.PHONY: run-granian-dev
+run-granian-dev: ## Run FastAPI with granian
+	uv run granian --interface asgi main:app --host $(HOST) --port $(PORT) --log-level $(LOG_LEVEL) --reload
+
 # Create new alembic database migration
 .PHONY: create-db-migration
 create-db-migration: ## Create new alembic database migration aka database revision.
 	uv run alembic revision --autogenerate -m "add parquet_index table" "$(msg)"
+
+.PHONY: apply-db-migrations
+apply-db-migrations: ## apply alembic migrations to database/schema
+	uv run alembic upgrade head

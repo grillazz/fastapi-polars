@@ -1,6 +1,8 @@
 import os
 from fastapi import Request, APIRouter, Depends
 
+
+from models.parquet import ParquetIndex
 from schemas.pydantic import PolarsIcedSchema
 from schemas.polars import pl_iced_schema
 import polars as pl
@@ -98,7 +100,7 @@ async def materialize_iced_data(
     filename_generator: FilenameGeneratorService = Depends(
         get_filename_generator_service
     ),
-    db_session: DatabaseService = Depends(DatabaseService().get_db),
+    db_session: AsyncSession  = Depends(DatabaseService().get_db),
 ):
     """
     Endpoint to materialize the iced data stored in the application state to S3.
@@ -117,7 +119,9 @@ async def materialize_iced_data(
     )  # Generate a filename for the dump
     _df = request.app.your_iced_data
     _res = s3.materialize_dataframe(_df, _file)  # Materialize the DataFrame to S3
-    return {"message": _res, "database": db_session.__str__()}  # Return the result message
+    _parquet_index = ParquetIndex(s3_url=_res["path"])
+    _res_db = await _parquet_index.save(db_session)
+    return {"message": _res, "database": _res_db}  # Return the result message
 
 
 @router.post("/v1/merge_parquet_files")

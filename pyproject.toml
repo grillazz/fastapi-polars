@@ -16,6 +16,7 @@ dependencies = [
     "marimo>=0.11.5",
     "polars>=1.24.0",
     "polyfactory>=2.19.0",
+    "pydantic-extra-types>=2.10.2",
     "pydantic-settings>=2.8.1",
     "ruff>=0.9.3",
     "s3fs>=2025.2.0",
