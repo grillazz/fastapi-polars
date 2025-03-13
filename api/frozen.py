@@ -117,11 +117,19 @@ async def materialize_iced_data(
     _file = (
         await filename_generator.generate_filename()
     )  # Generate a filename for the dump
-    _df = request.app.your_iced_data
+    _df: pl.DataFrame = request.app.your_iced_data
     _res = s3.materialize_dataframe(_df, _file)  # Materialize the DataFrame to S3
     _parquet_index = ParquetIndex(s3_url=_res["path"])
     _res_db = await _parquet_index.save(db_session)
+
+    _df.write_database(
+        table_name="books_index",
+        connection="postgresql://metabase:secret@localhost/metabase",
+        if_table_exists="append",
+        engine="adbc"
+    )
     return {"message": _res, "database": _res_db}  # Return the result message
+
 
 
 @router.post("/v1/merge_parquet_files")
