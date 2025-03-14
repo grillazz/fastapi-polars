@@ -1,7 +1,7 @@
 from typing import Optional
 from uuid import uuid4
 
-from sqlalchemy import String, ForeignKey, CheckConstraint, Text
+from sqlalchemy import String, ForeignKey, CheckConstraint, Text, Integer
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 from sqlalchemy.dialects.postgresql import UUID
 
@@ -9,12 +9,15 @@ from models.base import Base
 from models.parquet import ParquetIndex
 
 
+
 class BooksIndex(Base):
     __tablename__ = "books_index"
 
     uuid: Mapped[UUID] = mapped_column(UUID, primary_key=True, default=uuid4)
-    isbn: Mapped[str] = mapped_column(String(17), unique=True, nullable=False)
+    pages: Mapped[int] = mapped_column(Integer, nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    isbn: Mapped[str] = mapped_column(String(17), unique=True, nullable=False)
+    author: Mapped[str] = mapped_column(String(255), nullable=False)
     parquet_uuid: Mapped[UUID] = mapped_column(
         UUID,
         ForeignKey("parquet_index.uuid", ondelete="CASCADE"),
