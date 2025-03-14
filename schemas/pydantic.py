@@ -2,10 +2,11 @@ from polyfactory.factories.pydantic_factory import ModelFactory
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 from pydantic_extra_types.isbn import ISBN
 
-class PolarsIcedSchema(BaseModel):
-    ingest: int = Field(description="The ingestion number or ID")
-    saffire: str = Field(description="Saffire identifier")
+class BookSchema(BaseModel):
+    pages: int = Field(description="Number of pages in the book")
+    description: str = Field(description="Book description text")
     isbn: ISBN = Field(description="Book ISBN-10 or ISBN-13 number")
+    author: str = Field(description="Author of the book")
 
     # TODO: add date field > when testing in locust allow for range i.e. month of random dates
 
@@ -13,9 +14,10 @@ class PolarsIcedSchema(BaseModel):
         json_schema_extra={
             "examples": [
                 {
-                    "ingest": 12345,
-                    "saffire": "SF-789-XYZ",
-                    "isbn": "978-0-306-40615-7"
+                    "pages": 432,
+                    "description": "An illustrated guide to programming",
+                    "isbn": "978-0-306-40615-7",
+                    "author": "Jane Doe"
                 }
             ]
         }
@@ -28,5 +30,5 @@ class PolarsIcedSchema(BaseModel):
             return value.replace("-", "")
         return value
 
-class PolarsIcedFactory(ModelFactory[PolarsIcedSchema]):
-    __model__ = PolarsIcedSchema
+class BookFactory(ModelFactory[BookSchema]):
+    __model__ = BookSchema
