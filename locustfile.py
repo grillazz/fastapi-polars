@@ -12,7 +12,7 @@ class PerformanceTests(HttpUser):
     wait_time = between(1, 3)
 
     @task(1)
-    def test_your_iced_data(self):
+    def test_your_books_data(self):
         payload = [
             PolarsIcedFactory.build(factory_use_constructors=True).model_dump(
                 mode="json"

@@ -3,8 +3,8 @@ from fastapi import Request, APIRouter, Depends
 
 
 from models.parquet import ParquetIndex
-from schemas.pydantic import PolarsIcedSchema
-from schemas.polars import pl_iced_schema
+from schemas.pydantic import BookSchema
+from schemas.polars import pl_book_schema
 import polars as pl
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -35,7 +35,7 @@ async def root(request: Request):
     try:
         dataframe = request.app.__getattribute__(global_settings.dataframe_name)
         _s = dataframe.estimated_size(unit="mb")
-        _c = dataframe.get_column("ingest").count()
+        _c = dataframe.get_column("uuid").count()
         return {"message": f"Welcome to Grizzly Rest API. {_s=} {_c=}"}
     except AttributeError:
         return {"message": "Welcome to Grizzly Rest API. No dataframe defined yet."}
@@ -43,7 +43,7 @@ async def root(request: Request):
 
 @router.post("/v1/froze_data_in_frame")
 async def froze_data_in_frame(
-    data: list[PolarsIcedSchema],
+    data: list[BookSchema],
     request: Request,
     s3: S3Service = Depends(),
     filename_generator: FilenameGeneratorService = Depends(
@@ -55,7 +55,7 @@ async def froze_data_in_frame(
     If the DataFrame exceeds a specified size, it is materialized to S3 and cleared.
 
     Args:
-        data (list[PolarsIcedSchema]): List of data items to be added to the DataFrame.
+        data (list[BookSchema]): List of data items to be added to the DataFrame.
         request (Request): The FastAPI request object.
         s3 (S3Service): The S3 service dependency.
         filename_generator (FilenameGeneratorService): The filename generator service dependency.
@@ -63,15 +63,15 @@ async def froze_data_in_frame(
     Returns:
         dict: A message indicating the data has been frozen.
     """
-    _ice_cube = pl.DataFrame(
+    _pl_data_frame = pl.DataFrame(
         [{**_d.__dict__, "pid": str(os.getpid())} for _d in data]
     )  # Convert input data to a Polars DataFrame
     if not hasattr(request.app, global_settings.dataframe_name):
         request.app.__setattr__(
-            global_settings.dataframe_name, pl.DataFrame(schema=pl_iced_schema)
+            global_settings.dataframe_name, pl.DataFrame(schema=pl_book_schema)
         )  # Initialize DataFrame in app state if not present
     request.app.__getattribute__(global_settings.dataframe_name).extend(
-        _ice_cube
+        _pl_data_frame
     )  # Extend the existing DataFrame with new data
     if (
         request.app.__getattribute__(global_settings.dataframe_name).estimated_size(
@@ -93,8 +93,8 @@ async def froze_data_in_frame(
     return {"message": "Data frozen in ice cube"}  # Return a success message
 
 
-@router.post("/v1/materialize_iced_data")
-async def materialize_iced_data(
+@router.post("/v1/materialize_data_in_parquet")
+async def materialize_data_in_parquet(
     request: Request,
     s3: S3Service = Depends(),
     filename_generator: FilenameGeneratorService = Depends(
@@ -117,7 +117,7 @@ async def materialize_iced_data(
     _file = (
         await filename_generator.generate_filename()
     )  # Generate a filename for the dump
-    _df: pl.DataFrame = request.app.your_iced_data
+    _df: pl.DataFrame = request.app.yours_book_data
     _res = s3.materialize_dataframe(_df, _file)  # Materialize the DataFrame to S3
     _parquet_index = ParquetIndex(s3_url=_res["path"])
     _res_db = await _parquet_index.save(db_session)

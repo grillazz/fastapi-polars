@@ -18,7 +18,7 @@ class Settings(BaseSettings):
         default=10, description="Size threshold for dumping the DataFrame in MB"
     )
     dataframe_name: str = Field(
-        default="your_iced_data", description="Name of the DataFrame"
+        default="your_books_data", description="Name of the DataFrame"
     )
     s3_credentials: S3Credentials = S3Credentials()
 

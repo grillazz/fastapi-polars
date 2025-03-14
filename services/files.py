@@ -45,4 +45,4 @@ def get_filename_generator_service() -> FilenameGeneratorService:
     Returns:
         FilenameGeneratorService: An instance of FilenameGeneratorService with the base name 'polars_iced_data'.
     """
-    return FilenameGeneratorService("your_iced_data")
+    return FilenameGeneratorService("your_books_data")
