@@ -28,7 +28,7 @@ run-granian-dev: ## Run FastAPI with granian
 # Create new alembic database migration
 .PHONY: create-db-migration
 create-db-migration: ## Create new alembic database migration aka database revision.
-	uv run alembic revision --autogenerate -m "add parquet_index table" "$(msg)"
+	uv run alembic revision --autogenerate -m "$(msg)"
 
 .PHONY: apply-db-migrations
 apply-db-migrations: ## apply alembic migrations to database/schema
