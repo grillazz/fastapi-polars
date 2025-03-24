@@ -1,7 +1,7 @@
 from typing import Optional
 from uuid import uuid4
 
-from sqlalchemy import String, ForeignKey, CheckConstraint, Text, Integer
+from sqlalchemy import String, ForeignKey, CheckConstraint, Text, Integer, BigInteger
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 from sqlalchemy.dialects.postgresql import UUID
 
@@ -9,23 +9,35 @@ from models.base import Base
 from models.parquet import ParquetIndex
 
 
-
 class BooksIndex(Base):
-    __tablename__ = "books_index"
+    __tablename__ = 'books_index'
 
-    uuid: Mapped[UUID] = mapped_column(UUID, primary_key=True, default=uuid4)
-    pages: Mapped[int] = mapped_column(Integer, nullable=False)
-    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    isbn: Mapped[str] = mapped_column(String(17), unique=True, nullable=False)
-    author: Mapped[str] = mapped_column(String(255), nullable=False)
-    parquet_uuid: Mapped[UUID] = mapped_column(
-        UUID,
-        ForeignKey("parquet_index.uuid", ondelete="CASCADE"),
-        nullable=False
+    isbn: Mapped[str] = mapped_column(Text, primary_key=True)
+    pages: Mapped[Optional[int]] = mapped_column(BigInteger)
+    author: Mapped[Optional[str]] = mapped_column(Text)
+    pid: Mapped[Optional[int]] = mapped_column(BigInteger)
+    hash: Mapped[Optional[int]] = mapped_column(BigInteger)
+    parquet_id: Mapped[int] = mapped_column(
+            BigInteger,
+            ForeignKey("parquet_index.id", ondelete="CASCADE"),
+            nullable=False
     )
 
+# class BooksIndex(Base):
+#     __tablename__ = "books_index"
+#     pages: Mapped[int] = mapped_column(Integer, nullable=False)
+#     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+#     isbn: Mapped[str] = mapped_column(String(17), unique=True, nullable=False, primary_key=True)
+#     author: Mapped[str] = mapped_column(String(255), nullable=False)
+#     # parquet_uuid: Mapped[UUID] = mapped_column(
+#     #     UUID,
+#     #     ForeignKey("parquet_index.uuid", ondelete="CASCADE"),
+#     #     nullable=False
+#     # )
+#     pid: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
     # Relationship to ParquetIndex
-    parquet: Mapped[ParquetIndex] = relationship("ParquetIndex", back_populates="books")
+    # parquet: Mapped[ParquetIndex] = relationship("ParquetIndex", back_populates="books")
 
     # # Add constraint for ISBN format validation
     # __table_args__ = (

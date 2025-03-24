@@ -1,4 +1,6 @@
 import os
+from uuid import uuid4
+
 from fastapi import Request, APIRouter, Depends
 
 
@@ -64,7 +66,14 @@ async def froze_data_in_frame(
         dict: A message indicating the data has been frozen.
     """
     _pl_data_frame = pl.DataFrame(
-        [{**_d.__dict__, "pid": str(os.getpid())} for _d in data]
+        [{
+            "isbn": _d.isbn,
+            "description": _d.description,
+            "pages": _d.pages,
+            "author": _d.author,
+            "pid": os.getpid(),
+            "hash": hash(_d.isbn+str(_d.pages)+_d.author)
+        } for _d in data]
     )  # Convert input data to a Polars DataFrame
     if not hasattr(request.app, global_settings.dataframe_name):
         request.app.__setattr__(
@@ -117,17 +126,44 @@ async def materialize_data_in_parquet(
     _file = (
         await filename_generator.generate_filename()
     )  # Generate a filename for the dump
-    _df: pl.DataFrame = request.app.yours_book_data
-    _res = s3.materialize_dataframe(_df, _file)  # Materialize the DataFrame to S3
-    _parquet_index = ParquetIndex(s3_url=_res["path"])
-    _res_db = await _parquet_index.save(db_session)
+    _df: pl.DataFrame = request.app.your_books_data
 
-    _df.write_database(
-        table_name="books_index",
-        connection="postgresql://metabase:secret@localhost/metabase",
-        if_table_exists="append",
-        engine="adbc"
-    )
+    _df_to_parquet = _df.select([
+        "description",
+        "hash"
+    ])
+
+    _res = s3.materialize_dataframe(_df_to_parquet, _file)  # Materialize the DataFrame to S3
+
+    _parquet_index = ParquetIndex(id=hash(_res["path"]),s3_url=_res["path"])
+    _res_db = await _parquet_index.save(db_session)
+    # TODO: check how it looks in memory and if address alloc by _df is the same as request.app.your_books_data
+    # TODO: drop all dfs which are already saved in s3 and sql
+
+    _df = (_df.select([
+        "isbn",
+        "pages",
+        "author",
+        "pid",
+        "hash"
+    ]).with_columns(
+        pl.lit(hash(_res["path"])).alias("parquet_id")
+    ))
+
+    print(_df.head())
+
+    try:
+        _df.write_database(
+            table_name="books_index",
+            connection="postgresql://metabase:secret@localhost/metabase",
+            engine="adbc",
+            if_table_exists="append"
+        )
+    except Exception as e:
+        print(e.__repr__())
+        print(e.__class__)
+        print("Error writing to database")
+
     return {"message": _res, "database": _res_db}  # Return the result message
 
 
