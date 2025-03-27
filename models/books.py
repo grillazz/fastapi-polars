@@ -12,11 +12,11 @@ from models.parquet import ParquetIndex
 class BooksIndex(Base):
     __tablename__ = 'books_index'
 
-    isbn: Mapped[str] = mapped_column(Text, primary_key=True)
+    isbn: Mapped[str] = mapped_column(Text)
     pages: Mapped[Optional[int]] = mapped_column(BigInteger)
     author: Mapped[Optional[str]] = mapped_column(Text)
     pid: Mapped[Optional[int]] = mapped_column(BigInteger)
-    hash: Mapped[Optional[int]] = mapped_column(BigInteger)
+    hash: Mapped[Optional[int]] = mapped_column(BigInteger, primary_key=True)
     parquet_id: Mapped[int] = mapped_column(
             BigInteger,
             ForeignKey("parquet_index.id", ondelete="CASCADE"),

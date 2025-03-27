@@ -146,3 +146,16 @@ class S3Service(metaclass=SingletonMetaNoArgs):
             list: A list of file paths in the bucket.
         """
         return self.s3fs_client.ls(bucket_name)
+
+    def get_file(self, s3_path: str, local_path: str):
+        """
+        Downloads a file from S3.
+
+        Args:
+            s3_path (str): The path of the file to download.
+            local_path (str): The local path to save the file
+
+        Returns:
+            bytes: The contents of the file.
+        """
+        return self.s3fs_client.get_file(s3_path, local_path)
