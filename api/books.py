@@ -76,6 +76,7 @@ async def froze_data_in_frame(
             "description": _d.description,
             "pages": _d.pages,
             "author": _d.author,
+            "pub_date": _d.pub_date,
             "pid": os.getpid(),
             "hash": hash(_d.isbn+str(_d.pages)+_d.author)
             # TODO: will be more deterministic ? "hash": hashlib.sha256((_d.isbn + str(_d.pages) + _d.author).encode()).hexdigest()

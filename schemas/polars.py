@@ -5,6 +5,7 @@ pl_book_schema = pl.Schema({
     "description": pl.Utf8,
     "pages": pl.Int64,
     "author": pl.Utf8,
+    "pub_date": pl.Date,
     "pid": pl.Int64,
     "hash": pl.Int64
 
