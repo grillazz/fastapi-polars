@@ -1,7 +1,11 @@
+import hashlib
+import logging
+import io
 import os
 from uuid import uuid4
 
 from fastapi import Request, APIRouter, Depends
+from starlette.responses import StreamingResponse, FileResponse
 
 
 from models.parquet import ParquetIndex
@@ -12,12 +16,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from services.files import FilenameGeneratorService, get_filename_generator_service
 from services.s3 import S3Service
+from services.index import IndexService
 from services.database import DatabaseService
 from config import settings as global_settings
 
 router = APIRouter()
 
-
+logger = logging.getLogger(__name__)
 @router.get("/")
 async def root(request: Request):
     """
@@ -73,6 +78,7 @@ async def froze_data_in_frame(
             "author": _d.author,
             "pid": os.getpid(),
             "hash": hash(_d.isbn+str(_d.pages)+_d.author)
+            # TODO: will be more deterministic ? "hash": hashlib.sha256((_d.isbn + str(_d.pages) + _d.author).encode()).hexdigest()
         } for _d in data]
     )  # Convert input data to a Polars DataFrame
     if not hasattr(request.app, global_settings.dataframe_name):
@@ -135,36 +141,17 @@ async def materialize_data_in_parquet(
 
     _res = s3.materialize_dataframe(_df_to_parquet, _file)  # Materialize the DataFrame to S3
 
-    _parquet_index = ParquetIndex(id=hash(_res["path"]),s3_url=_res["path"])
+    _parquet_path_id = hash(_res["path"])
+
+    _parquet_index = ParquetIndex(id=_parquet_path_id, s3_url=_res["path"])
     _res_db = await _parquet_index.save(db_session)
     # TODO: check how it looks in memory and if address alloc by _df is the same as request.app.your_books_data
     # TODO: drop all dfs which are already saved in s3 and sql
 
-    _df = (_df.select([
-        "isbn",
-        "pages",
-        "author",
-        "pid",
-        "hash"
-    ]).with_columns(
-        pl.lit(hash(_res["path"])).alias("parquet_id")
-    ))
+    _index: IndexService = IndexService()
+    _index_res = _index.write_index(dataframe=_df, parquet_path_id=_parquet_path_id)
 
-    print(_df.head())
-
-    try:
-        _df.write_database(
-            table_name="books_index",
-            connection="postgresql://metabase:secret@localhost/metabase",
-            engine="adbc",
-            if_table_exists="append"
-        )
-    except Exception as e:
-        print(e.__repr__())
-        print(e.__class__)
-        print("Error writing to database")
-
-    return {"message": _res, "database": _res_db}  # Return the result message
+    return {"message": _res, "database": _res_db, "books_added_to_index": _index_res}  # Return the result message
 
 
 
@@ -237,3 +224,50 @@ def list_files(bucket_name: str, s3: S3Service = Depends()):
     """
     files = s3.list_files(bucket_name)
     return {"files": files}
+
+
+@router.get("/v1/scan_parquet/{bucket}/{file_name}")
+def scan_parquet_file(
+        bucket: str,
+        file_name: str,
+        column: str,
+        value: str,
+        s3: S3Service = Depends()
+):
+    """
+    Perform a lazy scan with filtering on a Parquet file.
+
+    Args:
+        bucket (str): The S3 bucket name
+        file_name (str): The Parquet file name to scan
+        column (str): The column to filter on
+        value (str): The value to filter for
+        s3 (S3Service): S3 service dependency
+
+    Returns:
+        dict: Filtered data and scan metadata
+    """
+    try:
+        path = f"{bucket}/{file_name}"
+
+        if not s3.parquet_file_exists(path):
+            logger.error(f"Parquet file not found: {path}")
+            return {"error": f"Parquet file '{file_name}' not found in bucket '{bucket}'"}
+
+        # Create a lazy query with filtering
+        lazy_df = pl.scan_parquet(s3.get_object_url(path))
+        filtered_df = lazy_df.filter(pl.col(column) == value).collect()
+
+        row_count = filtered_df.height
+
+        return {
+            "data": filtered_df.to_dicts(),
+            "metadata": {
+                "row_count": row_count,
+                "columns": filtered_df.columns,
+                "filter_applied": f"{column} = {value}"
+            }
+        }
+    except Exception as e:
+        logger.error(f"Error scanning Parquet file: {str(e)}")
+        return {"error": f"Failed to scan Parquet file: {str(e)}"}

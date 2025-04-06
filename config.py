@@ -4,7 +4,6 @@ from pydantic import BaseModel, AnyHttpUrl, Field, PostgresDsn, computed_field
 from pydantic_core._pydantic_core import MultiHostUrl
 from pydantic_settings import BaseSettings
 
-
 class S3Credentials(BaseModel):
     endpoint_url: AnyHttpUrl = Field(
         default_factory=lambda: os.getenv("S3_ENDPOINT_URL", "http://localhost:9000")
@@ -20,6 +19,15 @@ class Settings(BaseSettings):
     dataframe_name: str = Field(
         default="your_books_data", description="Name of the DataFrame"
     )
+    index_engine: str = Field(
+        default="adbc",
+        description="ADBC: Arrow Database Connectivity https://arrow.apache.org/docs/format/ADBC.html",
+    )
+    index_table: str = Field(
+        default="books_index",
+        description="Name of the index table in the database",
+    )
+
     s3_credentials: S3Credentials = S3Credentials()
 
     POSTGRES_USER: str = Field(default="metabase")
@@ -30,19 +38,6 @@ class Settings(BaseSettings):
     @computed_field
     @property
     def asyncpg_url(self) -> PostgresDsn:
-        """
-        This is a computed field that generates a PostgresDsn URL for asyncpg.
-
-        The URL is built using the MultiHostUrl.build method, which takes the following parameters:
-        - scheme: The scheme of the URL. In this case, it is "postgresql+asyncpg".
-        - username: The username for the Postgres database, retrieved from the POSTGRES_USER environment variable.
-        - password: The password for the Postgres database, retrieved from the POSTGRES_PASSWORD environment variable.
-        - host: The host of the Postgres database, retrieved from the POSTGRES_HOST environment variable.
-        - path: The path of the Postgres database, retrieved from the POSTGRES_DB environment variable.
-
-        Returns:
-            PostgresDsn: The constructed PostgresDsn URL for asyncpg.
-        """
         return MultiHostUrl.build(
             scheme="postgresql+asyncpg",
             username=self.POSTGRES_USER,
@@ -50,6 +45,18 @@ class Settings(BaseSettings):
             host=self.POSTGRES_HOST,
             path=self.POSTGRES_DB,
         )
+
+    @computed_field
+    @property
+    def pg_url(self) -> PostgresDsn:
+        return MultiHostUrl.build(
+            scheme="postgresql",
+            username=self.POSTGRES_USER,
+            password=self.POSTGRES_PASSWORD,
+            host=self.POSTGRES_HOST,
+            path=self.POSTGRES_DB,
+        )
+
 
 settings: Settings = Settings()
 
