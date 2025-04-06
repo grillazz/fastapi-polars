@@ -3,11 +3,10 @@ from pydantic import BaseModel, Field, ConfigDict, field_validator
 from pydantic_extra_types.isbn import ISBN
 
 class BookSchema(BaseModel):
-    pages: int = Field(description="Number of pages in the book")
-    description: str = Field(description="Book description text")
     isbn: ISBN = Field(description="Book ISBN-10 or ISBN-13 number")
+    description: str = Field(description="Book description text")
     author: str = Field(description="Author of the book")
-
+    pages: int = Field(description="Number of pages in the book")
     # TODO: add date field > when testing in locust allow for range i.e. month of random dates
 
     model_config = ConfigDict(

@@ -1,11 +1,33 @@
+from typing import Dict, Type, Any
+
+from faker import Faker
+
 from locust import HttpUser, task, between
-from schemas.pydantic import PolarsIcedSchema
-
 from polyfactory.factories.pydantic_factory import ModelFactory
+from schemas.pydantic import BookSchema
+from pydantic_extra_types.isbn import ISBN
+
+faker = Faker()
+
+class ISBNGen(str):
+    def __new__(cls, *args, **kwargs):
+        # Create a string instance with a valid ISBN
+        return super().__new__(cls, faker.isbn13())
 
 
-class PolarsIcedFactory(ModelFactory[PolarsIcedSchema]):
-    __model__ = PolarsIcedSchema
+
+class BookFactory(ModelFactory[BookSchema]):
+    __model__ = BookSchema
+
+    @classmethod
+    def get_provider_map(cls) -> Dict[Type, Any]:
+        providers_map = super().get_provider_map()
+
+        return {
+            ISBN: lambda: ISBNGen(),
+            **providers_map,
+        }
+
 
 
 class PerformanceTests(HttpUser):
@@ -14,12 +36,12 @@ class PerformanceTests(HttpUser):
     @task(1)
     def test_your_books_data(self):
         payload = [
-            PolarsIcedFactory.build(factory_use_constructors=True).model_dump(
+            BookFactory.build(factory_use_constructors=True).model_dump(
                 mode="json"
             )
             for _ in range(600)
         ]
         headers = {"Accept": "application/json", "Content-Type": "application/json"}
         self.client.post(
-            "/frozen/v1/froze_data_in_frame", json=payload, headers=headers
+            "/grizzly/v1/froze_data_in_frame", json=payload, headers=headers
         )
