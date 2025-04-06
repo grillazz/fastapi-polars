@@ -35,7 +35,7 @@ class IndexService:
             Exception: If there is an error writing to the database.
         """
         dataframe = dataframe.select([
-            "isbn", "pages", "author", "pid", "hash"
+            "isbn", "pages", "author", "pub_date", "pid", "hash"
         ]).with_columns(
             pl.lit(parquet_path_id).alias("parquet_id")
         )
