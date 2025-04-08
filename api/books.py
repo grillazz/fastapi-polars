@@ -5,8 +5,6 @@ import os
 from uuid import uuid4
 
 from fastapi import Request, APIRouter, Depends
-from starlette.responses import StreamingResponse, FileResponse
-
 
 from models.parquet import ParquetIndex
 from schemas.pydantic import BookSchema
@@ -46,6 +44,45 @@ async def root(request: Request):
         return {"message": f"Welcome to Grizzly Rest API. {_s=} {_c=}"}
     except AttributeError:
         return {"message": "Welcome to Grizzly Rest API. No dataframe defined yet."}
+
+
+@router.get("/v1/filter_parquets")
+async def filter_parquets(
+    bucket: str,
+    file_name: str,
+    value: int,
+    s3: S3Service = Depends(),
+):
+    """
+    Endpoint to filter Parquet files in S3 based on a specific column and value.
+
+    Args:
+        bucket (str): The S3 bucket name.
+        file_name (str): The Parquet file name to filter.
+        column (str): The column to filter on.
+        value (str): The value to filter for.
+        s3 (S3Service): The S3 service dependency.
+
+    Returns:
+        dict: Filtered data and metadata about the scan operation.
+    """
+    path = f"s3://daily/*.parquet"
+    # if not s3.parquet_file_exists(path):
+    #     return {"error": f"Parquet file '{file_name}' not found in bucket '{bucket}'"}
+
+    # Create a lazy query with filtering
+    lazy_df = pl.scan_parquet(path, storage_options=dict(endpoint_url=s3.s3_url, aws_access_key_id=s3.s3_key, aws_secret_access_key=s3.s3_secret), allow_missing_columns=True)
+    filtered_df = lazy_df.select("isbn","pages").filter(pl.col("pages") < value).collect(streaming=True)
+
+    row_count = filtered_df.height
+
+    return {
+        "data": filtered_df.to_dicts(),
+        "metadata": {
+            "row_count": row_count,
+            "columns": filtered_df.columns,
+        }
+    }
 
 
 @router.post("/v1/froze_data_in_frame")
@@ -225,50 +262,3 @@ def list_files(bucket_name: str, s3: S3Service = Depends()):
     """
     files = s3.list_files(bucket_name)
     return {"files": files}
-
-
-@router.get("/v1/scan_parquet/{bucket}/{file_name}")
-def scan_parquet_file(
-        bucket: str,
-        file_name: str,
-        column: str,
-        value: str,
-        s3: S3Service = Depends()
-):
-    """
-    Perform a lazy scan with filtering on a Parquet file.
-
-    Args:
-        bucket (str): The S3 bucket name
-        file_name (str): The Parquet file name to scan
-        column (str): The column to filter on
-        value (str): The value to filter for
-        s3 (S3Service): S3 service dependency
-
-    Returns:
-        dict: Filtered data and scan metadata
-    """
-    try:
-        path = f"{bucket}/{file_name}"
-
-        if not s3.parquet_file_exists(path):
-            logger.error(f"Parquet file not found: {path}")
-            return {"error": f"Parquet file '{file_name}' not found in bucket '{bucket}'"}
-
-        # Create a lazy query with filtering
-        lazy_df = pl.scan_parquet(s3.get_object_url(path))
-        filtered_df = lazy_df.filter(pl.col(column) == value).collect()
-
-        row_count = filtered_df.height
-
-        return {
-            "data": filtered_df.to_dicts(),
-            "metadata": {
-                "row_count": row_count,
-                "columns": filtered_df.columns,
-                "filter_applied": f"{column} = {value}"
-            }
-        }
-    except Exception as e:
-        logger.error(f"Error scanning Parquet file: {str(e)}")
-        return {"error": f"Failed to scan Parquet file: {str(e)}"}
