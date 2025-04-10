@@ -4,7 +4,7 @@ import io
 import os
 from uuid import uuid4
 
-from fastapi import Request, APIRouter, Depends
+from fastapi import Request, APIRouter, Depends, BackgroundTasks
 
 from models.parquet import ParquetIndex
 from schemas.pydantic import BookSchema
@@ -21,6 +21,25 @@ from config import settings as global_settings
 router = APIRouter()
 
 logger = logging.getLogger(__name__)
+
+
+async def append_to_parquet_file(dataframe: pl.DataFrame, file_path: str):
+    """
+    Appends a Polars DataFrame to an existing Parquet file on the file system.
+
+    Args:
+        dataframe (pl.DataFrame): The DataFrame to append.
+        file_path (str): The path to the Parquet file.
+    """
+    if os.path.exists(file_path):
+        existing_df = pl.read_parquet(file_path)
+        combined_df = pl.concat([existing_df, dataframe])
+    else:
+        combined_df = dataframe
+
+    combined_df.write_parquet(file_path)
+
+
 @router.get("/")
 async def root(request: Request):
     """
@@ -89,10 +108,12 @@ async def filter_parquets(
 async def froze_data_in_frame(
     data: list[BookSchema],
     request: Request,
+    background_tasks: BackgroundTasks,
     s3: S3Service = Depends(),
     filename_generator: FilenameGeneratorService = Depends(
         get_filename_generator_service
     ),
+
 ):
     """
     Endpoint to freeze data into a Polars DataFrame and store it in the application state.
@@ -126,6 +147,12 @@ async def froze_data_in_frame(
     request.app.__getattribute__(global_settings.dataframe_name).extend(
         _pl_data_frame
     )  # Extend the existing DataFrame with new data
+
+
+    # ss background task append every payload to existing parquet file on file system
+    # file on system is backup in case of worker failure
+    # TODO: on lifespan we need step which copy this daily backups in case of failure to s3
+    background_tasks.add_task(append_to_parquet_file, _pl_data_frame, f"daily_{str(os.getpid())}.parquet")
     if (
         request.app.__getattribute__(global_settings.dataframe_name).estimated_size(
             unit="mb"
@@ -142,7 +169,7 @@ async def froze_data_in_frame(
         # Other coroutines will naturally wait for it to complete.
         if _res:
             delattr(request.app, global_settings.dataframe_name)  # Clear the DataFrame
-
+            # TODO: delete the persitency file from the local filesystem
     return {"message": "Data frozen in ice cube"}  # Return a success message
 
 
