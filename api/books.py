@@ -11,6 +11,7 @@ from schemas.pydantic import BookSchema
 from schemas.polars import pl_book_schema
 import polars as pl
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.concurrency import run_in_threadpool
 
 from services.files import FilenameGeneratorService, get_filename_generator_service
 from services.s3 import S3Service
@@ -109,6 +110,7 @@ async def froze_data_in_frame(
     data: list[BookSchema],
     request: Request,
     background_tasks: BackgroundTasks,
+    index: IndexService = Depends(),
     s3: S3Service = Depends(),
     filename_generator: FilenameGeneratorService = Depends(
         get_filename_generator_service
@@ -152,7 +154,19 @@ async def froze_data_in_frame(
     # ss background task append every payload to existing parquet file on file system
     # file on system is backup in case of worker failure
     # TODO: on lifespan we need step which copy this daily backups in case of failure to s3
+    # TODO: daily parquets can be moved to s3 10 min after midnight or once every worker is respawned using lifespan ?
+    # TODO: this will solve problem with not save records still in dataframe / memory
     background_tasks.add_task(append_to_parquet_file, _pl_data_frame, f"daily_{str(os.getpid())}.parquet")
+
+    # TODO: using IndexService write _pl_data_frame as increment to observability table in relational database
+
+    await run_in_threadpool(
+        index.write_index,
+        dataframe=_pl_data_frame,
+        parquet_path_id=hash("zyzzy"),
+    )
+
+
     if (
         request.app.__getattribute__(global_settings.dataframe_name).estimated_size(
             unit="mb"
