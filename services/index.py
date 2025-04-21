@@ -1,7 +1,4 @@
-"""
-Service module for database index operations.
-Provides functionality to write Polars DataFrames to a database index table.
-"""
+from typing import Any
 import polars as pl
 from attrs import define
 from config import settings as global_settings
@@ -20,7 +17,16 @@ class IndexService:
     index_table: str = global_settings.index_table
     index_connection: str = global_settings.pg_url.unicode_string()
 
-    def write_index(self, dataframe: pl.DataFrame, parquet_path_id: int):
+    def __call__(self) -> "IndexService":
+        """
+        Makes the service callable, allowing it to be used as a dependency.
+
+        Returns:
+            IndexService: The current instance of the service.
+        """
+        return self
+
+    def write_index(self, dataframe: pl.DataFrame, parquet_path_id: int) -> Any:
         """
         Writes a Polars DataFrame to the database index table.
 
@@ -39,7 +45,6 @@ class IndexService:
         ]).with_columns(
             pl.lit(parquet_path_id).alias("parquet_id")
         )
-        # TODO: add logger for dataframe head for debugging
         try:
             _res = dataframe.write_database(
                 table_name=self.index_table,
@@ -50,3 +55,4 @@ class IndexService:
             return _res
         except Exception as e:
             print(f"Error writing to database: {e}")
+            raise
