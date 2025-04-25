@@ -121,7 +121,6 @@ class S3Service(metaclass=SingletonMetaNoArgs):
         """
         return self.s3fs_client.ls("/")
 
-
     def create_bucket(self, bucket_name: str):
         """
         Creates a new bucket in the S3 storage.

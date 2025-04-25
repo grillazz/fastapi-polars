@@ -1,10 +1,7 @@
-import hashlib
 import logging
-import io
 import os
-from uuid import uuid4
 
-from fastapi import Request, APIRouter, Depends, BackgroundTasks
+from fastapi import Request, APIRouter, Depends
 
 from models.parquet import ParquetIndex
 from schemas.pydantic import BookSchema
@@ -41,14 +38,14 @@ async def append_to_parquet_file(dataframe: pl.DataFrame, file_path: str):
     combined_df.write_parquet(file_path)
 
 
-@router.get("/")
-async def root(request: Request):
+@router.get("/v1/current_stats", summary="Get current statistics about the DataFrame in the application state.")
+async def get_statistics_about_frame(request: Request):
     """
     Root endpoint to display a welcome message and information about the current DataFrame.
 
     This endpoint checks if a DataFrame is stored in the application state under the name specified
     in the global settings. If the DataFrame exists, it returns its estimated size and the count of
-    the 'ingest' column. If the DataFrame does not exist, it returns a message indicating that no
+    the 'key' column. If the DataFrame does not exist, it returns a message indicating that no
     DataFrame is defined yet.
 
     Args:
@@ -58,9 +55,9 @@ async def root(request: Request):
         dict: A dictionary containing a welcome message and DataFrame information if available.
     """
     try:
-        dataframe = request.app.__getattribute__(global_settings.dataframe_name)
+        dataframe = getattr(request.app, global_settings.dataframe_name)
         _s = dataframe.estimated_size(unit="mb")
-        _c = dataframe.get_column("uuid").count()
+        _c = dataframe.get_column("isbn").count()
         return {"message": f"Welcome to Grizzly Rest API. {_s=} {_c=}"}
     except AttributeError:
         return {"message": "Welcome to Grizzly Rest API. No dataframe defined yet."}
@@ -86,13 +83,25 @@ async def filter_parquets(
     Returns:
         dict: Filtered data and metadata about the scan operation.
     """
-    path = f"s3://daily/*.parquet"
+    path = "s3://daily/*.parquet"
     # if not s3.parquet_file_exists(path):
     #     return {"error": f"Parquet file '{file_name}' not found in bucket '{bucket}'"}
 
     # Create a lazy query with filtering
-    lazy_df = pl.scan_parquet(path, storage_options=dict(endpoint_url=s3.s3_url, aws_access_key_id=s3.s3_key, aws_secret_access_key=s3.s3_secret), allow_missing_columns=True)
-    filtered_df = lazy_df.select("isbn","pages").filter(pl.col("pages") < value).collect(streaming=True)
+    lazy_df = pl.scan_parquet(
+        path,
+        storage_options=dict(
+            endpoint_url=s3.s3_url,
+            aws_access_key_id=s3.s3_key,
+            aws_secret_access_key=s3.s3_secret,
+        ),
+        allow_missing_columns=True,
+    )
+    filtered_df = (
+        lazy_df.select("isbn", "pages")
+        .filter(pl.col("pages") < value)
+        .collect(streaming=True)
+    )
 
     row_count = filtered_df.height
 
@@ -101,21 +110,19 @@ async def filter_parquets(
         "metadata": {
             "row_count": row_count,
             "columns": filtered_df.columns,
-        }
+        },
     }
 
 
-@router.post("/v1/froze_data_in_frame")
-async def froze_data_in_frame(
+@router.post("/v1/ingest_data")
+async def ingest_data_into_frame(
     data: list[BookSchema],
     request: Request,
-    background_tasks: BackgroundTasks,
     index: IndexService = Depends(),
     s3: S3Service = Depends(),
     filename_generator: FilenameGeneratorService = Depends(
         get_filename_generator_service
     ),
-
 ):
     """
     Endpoint to freeze data into a Polars DataFrame and store it in the application state.
@@ -131,46 +138,48 @@ async def froze_data_in_frame(
         dict: A message indicating the data has been frozen.
     """
     _pl_data_frame = pl.DataFrame(
-        [{
-            "isbn": _d.isbn,
-            "description": _d.description,
-            "pages": _d.pages,
-            "author": _d.author,
-            "pub_date": _d.pub_date,
-            "pid": os.getpid(),
-            "hash": hash(_d.isbn+str(_d.pages)+_d.author)
-            # TODO: will be more deterministic ? "hash": hashlib.sha256((_d.isbn + str(_d.pages) + _d.author).encode()).hexdigest()
-        } for _d in data]
+        [
+            {
+                "isbn": _d.isbn,
+                "description": _d.description,
+                "pages": _d.pages,
+                "author": _d.author,
+                "pub_date": _d.pub_date,
+                "pid": os.getpid(),
+                "hash": hash(_d.isbn + str(_d.pages) + _d.author),
+                # TODO: will be more deterministic ? "hash": hashlib.sha256((_d.isbn + str(_d.pages) + _d.author).encode()).hexdigest()
+            }
+            for _d in data
+        ]
     )  # Convert input data to a Polars DataFrame
     if not hasattr(request.app, global_settings.dataframe_name):
-        request.app.__setattr__(
-            global_settings.dataframe_name, pl.DataFrame(schema=pl_book_schema)
+        setattr(
+            request.app,
+            global_settings.dataframe_name,
+            pl.DataFrame(schema=pl_book_schema),
         )  # Initialize DataFrame in app state if not present
-    request.app.__getattribute__(global_settings.dataframe_name).extend(
+    getattr(request.app, global_settings.dataframe_name).extend(
         _pl_data_frame
     )  # Extend the existing DataFrame with new data
 
-
-    # ss background task append every payload to existing parquet file on file system
-    # file on system is backup in case of worker failure
-    # TODO: on lifespan we need step which copy this daily backups in case of failure to s3
-    # TODO: daily parquets can be moved to s3 10 min after midnight or once every worker is respawned using lifespan ?
-    # TODO: this will solve problem with not save records still in dataframe / memory
-    background_tasks.add_task(append_to_parquet_file, _pl_data_frame, f"daily_{str(os.getpid())}.parquet")
-
     # TODO: using IndexService write _pl_data_frame as increment to observability table in relational database
-
+    # write index should catch dupes before writing to database
     await run_in_threadpool(
         index.write_index,
         dataframe=_pl_data_frame,
         parquet_path_id=hash("zyzzy"),
     )
 
+    # TODO: on lifespan we need step which copy this daily backups in case of failure to s3
+    # TODO: daily parquets can be moved to s3 10 min after midnight or once every worker is respawned using lifespan ?
+    # TODO: this will solve problem with not save records still in dataframe / memory
+    await append_to_parquet_file(_pl_data_frame, f"daily_{str(os.getpid())}.parquet")
+
+    # TODO: as end day procedure do aggr check btw index table and daily tail for after merged on s3
+    # TODO: what about global_settings.dataframe_name will ve dynamic attr i.e. __uuid().hex ???
 
     if (
-        request.app.__getattribute__(global_settings.dataframe_name).estimated_size(
-            unit="mb"
-        )
+        getattr(request.app, global_settings.dataframe_name).estimated_size(unit="mb")
         > global_settings.dataframe_dump_size
     ):
         _file = (
@@ -178,23 +187,23 @@ async def froze_data_in_frame(
         )  # Generate a filename for the dump
 
         _res = s3.materialize_dataframe(
-            request.app.__getattribute__(global_settings.dataframe_name), _file
+            getattr(request.app, global_settings.dataframe_name), _file
         )  # Materialize the DataFrame to S3, Make this function synchronous and blocking on IO.
         # Other coroutines will naturally wait for it to complete.
         if _res:
             delattr(request.app, global_settings.dataframe_name)  # Clear the DataFrame
-            # TODO: delete the persitency file from the local filesystem
+            # TODO: delete the persistence file from the local filesystem
     return {"message": "Data frozen in ice cube"}  # Return a success message
 
 
-@router.post("/v1/materialize_data_in_parquet")
-async def materialize_data_in_parquet(
+@router.post("/v1/save_parquet")
+async def materialize_data_in_parquet_file(
     request: Request,
     s3: S3Service = Depends(),
     filename_generator: FilenameGeneratorService = Depends(
         get_filename_generator_service
     ),
-    db_session: AsyncSession  = Depends(DatabaseService().get_db),
+    db_session: AsyncSession = Depends(DatabaseService().get_db),
 ):
     """
     Endpoint to materialize the iced data stored in the application state to S3.
@@ -213,12 +222,11 @@ async def materialize_data_in_parquet(
     )  # Generate a filename for the dump
     _df: pl.DataFrame = request.app.your_books_data
 
-    _df_to_parquet = _df.select([
-        "description",
-        "hash"
-    ])
+    _df_to_parquet = _df.select(["description", "hash"])
 
-    _res = s3.materialize_dataframe(_df_to_parquet, _file)  # Materialize the DataFrame to S3
+    _res = s3.materialize_dataframe(
+        _df_to_parquet, _file
+    )  # Materialize the DataFrame to S3
 
     _parquet_path_id = hash(_res["path"])
 
@@ -230,8 +238,11 @@ async def materialize_data_in_parquet(
     _index: IndexService = IndexService()
     _index_res = _index.write_index(dataframe=_df, parquet_path_id=_parquet_path_id)
 
-    return {"message": _res, "database": _res_db, "books_added_to_index": _index_res}  # Return the result message
-
+    return {
+        "message": _res,
+        "database": _res_db,
+        "books_added_to_index": _index_res,
+    }  # Return the result message
 
 
 @router.post("/v1/merge_parquet_files")
@@ -288,6 +299,7 @@ def create_bucket(bucket_name: str, s3: S3Service = Depends()):
     """
     result = s3.create_bucket(bucket_name)
     return result
+
 
 @router.get("/v1/list_files/{bucket_name}")
 def list_files(bucket_name: str, s3: S3Service = Depends()):
