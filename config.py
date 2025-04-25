@@ -4,6 +4,7 @@ from pydantic import BaseModel, AnyHttpUrl, Field, PostgresDsn, computed_field
 from pydantic_core._pydantic_core import MultiHostUrl
 from pydantic_settings import BaseSettings
 
+
 class S3Credentials(BaseModel):
     endpoint_url: AnyHttpUrl = Field(
         default_factory=lambda: os.getenv("S3_ENDPOINT_URL", "http://localhost:9000")
@@ -24,7 +25,7 @@ class Settings(BaseSettings):
         description="ADBC: Arrow Database Connectivity https://arrow.apache.org/docs/format/ADBC.html",
     )
     index_table: str = Field(
-        default="books_index",
+        default="books_index_2",
         description="Name of the index table in the database",
     )
 
@@ -59,4 +60,3 @@ class Settings(BaseSettings):
 
 
 settings: Settings = Settings()
-

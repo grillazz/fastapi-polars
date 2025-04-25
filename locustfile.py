@@ -9,11 +9,11 @@ from pydantic_extra_types.isbn import ISBN
 
 faker = Faker()
 
+
 class ISBNGen(str):
     def __new__(cls, *args, **kwargs):
         # Create a string instance with a valid ISBN
         return super().__new__(cls, faker.isbn13())
-
 
 
 class BookFactory(ModelFactory[BookSchema]):
@@ -29,17 +29,14 @@ class BookFactory(ModelFactory[BookSchema]):
         }
 
 
-
 class PerformanceTests(HttpUser):
     wait_time = between(1, 3)
 
     @task(1)
     def test_your_books_data(self):
         payload = [
-            BookFactory.build(factory_use_constructors=True).model_dump(
-                mode="json"
-            )
-            for _ in range(600)
+            BookFactory.build(factory_use_constructors=True).model_dump(mode="json")
+            for _ in range(64)
         ]
         headers = {"Accept": "application/json", "Content-Type": "application/json"}
         self.client.post(

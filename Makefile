@@ -4,7 +4,7 @@
 HOST = 0.0.0.0
 PORT = 8000
 LOG_LEVEL = debug
-WORKERS = 8
+WORKERS = 4
 
 # Help command
 .PHONY: help
@@ -19,7 +19,7 @@ run-uvicorn: ## Run FastAPI with uvicorn
 # Run FastAPI with granian
 .PHONY: run-granian
 run-granian: ## Run FastAPI with granian
-	uv run granian --interface asgi main:app --host $(HOST) --port $(PORT) --log-level $(LOG_LEVEL) --workers $(WORKERS)
+	uv run granian --interface asgi main:app --host $(HOST) --port $(PORT) --log-level $(LOG_LEVEL) --workers $(WORKERS) --no-ws --loop uvloop --interface asgi --runtime-mode mt  --pid-file .pid
 
 .PHONY: run-granian-dev
 run-granian-dev: ## Run FastAPI with granian

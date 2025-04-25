@@ -4,7 +4,7 @@ import logging
 from sqlalchemy.orm import declared_attr, DeclarativeBase
 from sqlalchemy.ext.asyncio import AsyncSession
 
-T = TypeVar('T', bound='Base')
+T = TypeVar("T", bound="Base")
 logger = logging.getLogger(__name__)
 
 

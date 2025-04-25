@@ -3,6 +3,7 @@ import polars as pl
 from attrs import define
 from config import settings as global_settings
 
+
 @define
 class IndexService:
     """
@@ -13,6 +14,7 @@ class IndexService:
         index_table (str): Name of the index table.
         index_connection (str): Database connection string.
     """
+
     index_engine: str = global_settings.index_engine
     index_table: str = global_settings.index_table
     index_connection: str = global_settings.pg_url.unicode_string()
@@ -40,17 +42,15 @@ class IndexService:
         Raises:
             Exception: If there is an error writing to the database.
         """
-        dataframe = dataframe.select([
-            "isbn", "pages", "author", "pub_date", "pid", "hash"
-        ]).with_columns(
-            pl.lit(parquet_path_id).alias("parquet_id")
-        )
+        dataframe = dataframe.select(
+            ["isbn", "pages", "author", "pub_date", "pid", "hash"]
+        ).with_columns(pl.lit(parquet_path_id).alias("parquet_id"))
         try:
             _res = dataframe.write_database(
                 table_name=self.index_table,
                 connection=self.index_connection,
                 engine=self.index_engine,
-                if_table_exists="append"
+                if_table_exists="append",
             )
             return _res
         except Exception as e:
