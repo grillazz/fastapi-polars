@@ -174,7 +174,7 @@ async def ingest_data_into_frame(
     # TODO: daily parquets can be moved to s3 10 min after midnight or once every worker is respawned using lifespan ?
     # TODO: this will solve problem with not save records still in dataframe / memory
     await append_to_parquet_file(_pl_data_frame, f"daily_{str(os.getpid())}.parquet")
-
+    # await run_in_threadpool(append_to_parquet_file, _pl_data_frame, f"daily_{str(os.getpid())}.parquet")
     # TODO: as end day procedure do aggr check btw index table and daily tail for after merged on s3
     # TODO: what about global_settings.dataframe_name will ve dynamic attr i.e. __uuid().hex ???
 

@@ -40,5 +40,5 @@ class PerformanceTests(HttpUser):
         ]
         headers = {"Accept": "application/json", "Content-Type": "application/json"}
         self.client.post(
-            "/grizzly/v1/froze_data_in_frame", json=payload, headers=headers
+            "/grizzly/v1/ingest_data", json=payload, headers=headers
         )
