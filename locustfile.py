@@ -39,6 +39,4 @@ class PerformanceTests(HttpUser):
             for _ in range(64)
         ]
         headers = {"Accept": "application/json", "Content-Type": "application/json"}
-        self.client.post(
-            "/grizzly/v1/ingest_data", json=payload, headers=headers
-        )
+        self.client.post("/grizzly/v1/ingest_data", json=payload, headers=headers)
