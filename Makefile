@@ -3,7 +3,7 @@
 # Variables
 HOST = 0.0.0.0
 PORT = 8000
-LOG_LEVEL = debug
+LOG_LEVEL = info
 WORKERS = 4
 
 # Help command
@@ -14,12 +14,12 @@ help: ## Show this help
 # Run FastAPI with uvicorn
 .PHONY: run-uvicorn
 run-uvicorn: ## Run FastAPI with uvicorn
-	uv run uvicorn main:app --host $(HOST) --port $(PORT) --reload --loop uvloop --http httptools --log-level $(LOG_LEVEL)
+	uv run uvicorn main:app --host $(HOST) --port $(PORT) --reload --loop uvloop --http httptools --log-level $(LOG_LEVEL) --runtime-threads 2 --runtime-blocking-threads 1
 
 # Run FastAPI with granian
 .PHONY: run-granian
 run-granian: ## Run FastAPI with granian
-	uv run granian --interface asgi main:app --host $(HOST) --port $(PORT) --log-level $(LOG_LEVEL) --workers $(WORKERS) --no-ws --loop uvloop --interface asgi --runtime-mode mt  --pid-file .pid
+	uv run granian --interface asgi main:app --host $(HOST) --port $(PORT) --log-level $(LOG_LEVEL) --workers $(WORKERS) --no-ws --loop uvloop --interface asgi --pid-file .pid
 
 .PHONY: run-granian-dev
 run-granian-dev: ## Run FastAPI with granian

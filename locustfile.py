@@ -36,7 +36,7 @@ class PerformanceTests(HttpUser):
     def test_your_books_data(self):
         payload = [
             BookFactory.build(factory_use_constructors=True).model_dump(mode="json")
-            for _ in range(64)
+            for _ in range(128)
         ]
         headers = {"Accept": "application/json", "Content-Type": "application/json"}
         self.client.post("/grizzly/v1/ingest_data", json=payload, headers=headers)
