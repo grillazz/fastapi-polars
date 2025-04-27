@@ -15,7 +15,7 @@ class S3Credentials(BaseModel):
 
 class Settings(BaseSettings):
     dataframe_dump_size: int = Field(
-        default=10, description="Size threshold for dumping the DataFrame in MB"
+        default=5, description="Size threshold for dumping the DataFrame in MB"
     )
     dataframe_name: str = Field(
         default="your_books_data", description="Name of the DataFrame"

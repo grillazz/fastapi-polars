@@ -1,7 +1,9 @@
+import hashlib
 import logging
 import os
 
-from fastapi import Request, APIRouter, Depends
+from fastapi import Request, APIRouter, Depends, HTTPException
+from fastapi.responses import JSONResponse
 
 from models.parquet import ParquetIndex
 from schemas.pydantic import BookSchema
@@ -29,16 +31,21 @@ async def append_to_parquet_file(dataframe: pl.DataFrame, file_path: str):
         dataframe (pl.DataFrame): The DataFrame to append.
         file_path (str): The path to the Parquet file.
     """
-    if os.path.exists(file_path):
-        existing_df = pl.read_parquet(file_path)
-        combined_df = pl.concat([existing_df, dataframe])
-    else:
-        combined_df = dataframe
+    try:
+        result_df = dataframe
+        if os.path.exists(file_path):
+            result_df = pl.concat([pl.read_parquet(file_path), dataframe])
+        result_df.write_parquet(file_path)
+        return True
+    except Exception as e:
+        logger.error(f"Error appending to Parquet file: {e}")
+        return False
 
-    combined_df.write_parquet(file_path)
 
-
-@router.get("/v1/current_stats", summary="Get current statistics about the DataFrame in the application state.")
+@router.get(
+    "/v1/current_stats",
+    summary="Get current statistics about the DataFrame in the application state.",
+)
 async def get_statistics_about_frame(request: Request):
     """
     Root endpoint to display a welcome message and information about the current DataFrame.
@@ -174,7 +181,7 @@ async def ingest_data_into_frame(
     # TODO: daily parquets can be moved to s3 10 min after midnight or once every worker is respawned using lifespan ?
     # TODO: this will solve problem with not save records still in dataframe / memory
     await append_to_parquet_file(_pl_data_frame, f"daily_{str(os.getpid())}.parquet")
-
+    # await run_in_threadpool(append_to_parquet_file, _pl_data_frame, f"daily_{str(os.getpid())}.parquet")
     # TODO: as end day procedure do aggr check btw index table and daily tail for after merged on s3
     # TODO: what about global_settings.dataframe_name will ve dynamic attr i.e. __uuid().hex ???
 
@@ -220,7 +227,7 @@ async def materialize_data_in_parquet_file(
     _file = (
         await filename_generator.generate_filename()
     )  # Generate a filename for the dump
-    _df: pl.DataFrame = request.app.your_books_data
+    _df: pl.DataFrame = getattr(request.app, global_settings.dataframe_name)
 
     _df_to_parquet = _df.select(["description", "hash"])
 

@@ -1,4 +1,3 @@
-import io
 from s3fs.core import S3FileSystem
 import polars as pl
 from attrs import define, field
@@ -44,11 +43,8 @@ class S3Service(metaclass=SingletonMetaNoArgs):
         Returns:
             dict: A dictionary containing the status and path of the uploaded file.
         """
-        parquet_bytes = io.BytesIO()
-        dataframe.write_parquet(parquet_bytes)
-        parquet_bytes.seek(0)  # Reset buffer to the beginning
         with self.s3fs_client.open(f"s3://daily/{path}", "wb") as f:
-            f.write(parquet_bytes.getvalue())
+            dataframe.write_parquet(f)
 
         return {"status": "success", "path": path}
 
