@@ -42,6 +42,28 @@ async def append_to_parquet_file(dataframe: pl.DataFrame, file_path: str):
         return False
 
 
+def remove_daily_parquet_file(file_path: str) -> bool:
+    """
+    Removes a daily Parquet file from the filesystem.
+
+    Args:
+        file_path (str): Path to the Parquet file to be removed.
+
+    Returns:
+        bool: True if the file was successfully removed or didn't exist, False if removal failed.
+    """
+    try:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            logger.info(f"Successfully removed Parquet file: {file_path}")
+            return True
+        else:
+            logger.info(f"Parquet file not found for removal: {file_path}")
+            return True
+    except Exception as e:
+        logger.error(f"Error removing Parquet file {file_path}: {e}")
+        return False
+
 @router.get(
     "/v1/current_stats",
     summary="Get current statistics about the DataFrame in the application state.",
@@ -171,18 +193,17 @@ async def ingest_data_into_frame(
 
     # TODO: using IndexService write _pl_data_frame as increment to observability table in relational database
     # write index should catch dupes before writing to database
-    await run_in_threadpool(
-        index.write_index,
-        dataframe=_pl_data_frame,
-        parquet_path_id=hash("zyzzy"),
-    )
+    # await run_in_threadpool(
+    #     index.write_index,
+    #     dataframe=_pl_data_frame,
+    #     parquet_path_id=hash("zyzzy"),
+    # )
 
-    # TODO: on lifespan we need step which copy this daily backups in case of failure to s3
     # TODO: daily parquets can be moved to s3 10 min after midnight or once every worker is respawned using lifespan ?
     # TODO: this will solve problem with not save records still in dataframe / memory
     await append_to_parquet_file(_pl_data_frame, f"daily_{str(os.getpid())}.parquet")
     # await run_in_threadpool(append_to_parquet_file, _pl_data_frame, f"daily_{str(os.getpid())}.parquet")
-    # TODO: as end day procedure do aggr check btw index table and daily tail for after merged on s3
+    # TODO: do we need daily merge on s3 if parquet will be 100megs each ?
     # TODO: what about global_settings.dataframe_name will ve dynamic attr i.e. __uuid().hex ???
 
     if (
@@ -199,7 +220,8 @@ async def ingest_data_into_frame(
         # Other coroutines will naturally wait for it to complete.
         if _res:
             delattr(request.app, global_settings.dataframe_name)  # Clear the DataFrame
-            # TODO: delete the persistence file from the local filesystem
+            remove_daily_parquet_file(f"daily_{str(os.getpid())}.parquet") # delete the persistence file from the local filesystem
+
     return {"message": "Data frozen in ice cube"}  # Return a success message
 
 
