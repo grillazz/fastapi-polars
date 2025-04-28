@@ -64,6 +64,7 @@ def remove_daily_parquet_file(file_path: str) -> bool:
         logger.error(f"Error removing Parquet file {file_path}: {e}")
         return False
 
+
 @router.get(
     "/v1/current_stats",
     summary="Get current statistics about the DataFrame in the application state.",
@@ -220,7 +221,9 @@ async def ingest_data_into_frame(
         # Other coroutines will naturally wait for it to complete.
         if _res:
             delattr(request.app, global_settings.dataframe_name)  # Clear the DataFrame
-            remove_daily_parquet_file(f"daily_{str(os.getpid())}.parquet") # delete the persistence file from the local filesystem
+            remove_daily_parquet_file(
+                f"daily_{str(os.getpid())}.parquet"
+            )  # delete the persistence file from the local filesystem
 
     return {"message": "Data frozen in ice cube"}  # Return a success message
 
