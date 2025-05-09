@@ -34,4 +34,5 @@ dependencies = [
     "uvicorn>=0.34.2",
     "uvloop>=0.21.0",
     "whenever>=0.7.3",
+    "adbc-driver-sqlite>=1.6.0",
 ]

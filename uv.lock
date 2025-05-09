@@ -36,6 +36,23 @@ wheels = [
 ]
 
 [[package]]
+name = "adbc-driver-sqlite"
+version = "1.6.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "adbc-driver-manager" },
+    { name = "importlib-resources" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/35/b1/c6e3c4e6740413c580b40085c21870a09ca9181bcfaa8a7aba98b93c2d7e/adbc_driver_sqlite-1.6.0.tar.gz", hash = "sha256:f3d6db788afde92b9cb1eecfc08fdcee301a7ee86c50e21357db0bb3e80b991b", size = 17038 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b8/a0/a635440c9521be7924ab1daf76d64b77c93042b1901026acb1c018ce789a/adbc_driver_sqlite-1.6.0-py3-none-macosx_10_15_x86_64.whl", hash = "sha256:b68dbe03c6a26ac1a3ec089ad6f067fe60a6eb4e26a0bffd230d8bf4a9f58f21", size = 1041104 },
+    { url = "https://files.pythonhosted.org/packages/72/25/52a079ddfde95d08c37bed59fcd5e2e1d0f180fc552885f925058ebc922f/adbc_driver_sqlite-1.6.0-py3-none-macosx_11_0_arm64.whl", hash = "sha256:55e163c08dbb7b068f692e359f3dadb9f3349a720d1b2cf39aec44925a1bed3a", size = 1011451 },
+    { url = "https://files.pythonhosted.org/packages/73/28/be596c01913a81fed3dda451764b216221ba074c2a690733eef7528c152a/adbc_driver_sqlite-1.6.0-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:c4bf7bd287d4dc76bc865d0c88ffd6c22a606965298febf714e6b9439a0ff5f3", size = 955262 },
+    { url = "https://files.pythonhosted.org/packages/92/ec/ce41f3c84b5b4f762e4de9072574714c623e959924bf1bbaf1548612cb6e/adbc_driver_sqlite-1.6.0-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:922a561c84c53f8fac42f1d636dfb915a265de3ebd39c35cf0d1cbe58d668616", size = 976623 },
+    { url = "https://files.pythonhosted.org/packages/9d/6e/0231878df1e7b71607f6c71c08dd68ea168622496b000d9be79860c1e32d/adbc_driver_sqlite-1.6.0-py3-none-win_amd64.whl", hash = "sha256:1e28c378759915dd39eae02da98b189d33b9604c3c54e08caf256457f63727b2", size = 862809 },
+]
+
+[[package]]
 name = "aiobotocore"
 version = "2.21.1"
 source = { registry = "https://pypi.org/simple" }
@@ -482,6 +499,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "adbc-driver-manager" },
     { name = "adbc-driver-postgresql" },
+    { name = "adbc-driver-sqlite" },
     { name = "alembic" },
     { name = "anyio" },
     { name = "asyncpg" },
@@ -515,6 +533,7 @@ dependencies = [
 requires-dist = [
     { name = "adbc-driver-manager", specifier = ">=1.5.0" },
     { name = "adbc-driver-postgresql", specifier = ">=1.5.0" },
+    { name = "adbc-driver-sqlite", specifier = ">=1.6.0" },
     { name = "alembic", specifier = ">=1.15.2" },
     { name = "anyio", specifier = ">=4.9.0" },
     { name = "asyncpg", specifier = ">=0.30.0" },
