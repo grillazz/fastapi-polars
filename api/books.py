@@ -2,7 +2,7 @@ import hashlib
 import logging
 import os
 
-from fastapi import Request, APIRouter, Depends, HTTPException
+from fastapi import Request, APIRouter, Depends, HTTPException, BackgroundTasks
 from fastapi.responses import JSONResponse
 
 from models.parquet import ParquetIndex
@@ -149,24 +149,12 @@ async def ingest_data_into_frame(
     data: list[BookSchema],
     request: Request,
     index: IndexService = Depends(),
+    background_tasks: BackgroundTasks = BackgroundTasks(),
     s3: S3Service = Depends(),
     filename_generator: FilenameGeneratorService = Depends(
         get_filename_generator_service
     ),
 ):
-    """
-    Endpoint to freeze data into a Polars DataFrame and store it in the application state.
-    If the DataFrame exceeds a specified size, it is materialized to S3 and cleared.
-
-    Args:
-        data (list[BookSchema]): List of data items to be added to the DataFrame.
-        request (Request): The FastAPI request object.
-        s3 (S3Service): The S3 service dependency.
-        filename_generator (FilenameGeneratorService): The filename generator service dependency.
-
-    Returns:
-        dict: A message indicating the data has been frozen.
-    """
     _pl_data_frame = pl.DataFrame(
         [
             {
@@ -194,19 +182,13 @@ async def ingest_data_into_frame(
 
     # TODO: using IndexService write _pl_data_frame as increment to observability table in relational database
     # write index should catch dupes before writing to database
-    # await run_in_threadpool(
-    #     index.write_index,
-    #     dataframe=_pl_data_frame,
-    #     parquet_path_id=hash("zyzzy"),
-    # )
+    background_tasks.add_task(
+        index.write_lite_index,
+        dataframe=_pl_data_frame,
+        parquet_path_id=hash("zyzzy"),
+    )
 
-    # TODO: daily parquets can be moved to s3 10 min after midnight or once every worker is respawned using lifespan ?
-    # TODO: this will solve problem with not save records still in dataframe / memory
-    await append_to_parquet_file(_pl_data_frame, f"daily_{str(os.getpid())}.parquet")
-    # await run_in_threadpool(append_to_parquet_file, _pl_data_frame, f"daily_{str(os.getpid())}.parquet")
-    # TODO: do we need daily merge on s3 if parquet will be 100megs each ?
-    # TODO: what about global_settings.dataframe_name will ve dynamic attr i.e. __uuid().hex ???
-
+    # TODO: do write parquet if this is last chunk of data for day
     if (
         getattr(request.app, global_settings.dataframe_name).estimated_size(unit="mb")
         > global_settings.dataframe_dump_size
@@ -224,6 +206,7 @@ async def ingest_data_into_frame(
             remove_daily_parquet_file(
                 f"daily_{str(os.getpid())}.parquet"
             )  # delete the persistence file from the local filesystem
+            return {"message": _res}
 
     return {"message": "Data frozen in ice cube"}  # Return a success message
 
@@ -262,17 +245,17 @@ async def materialize_data_in_parquet_file(
 
     _parquet_path_id = hash(_res["path"])
 
-    _parquet_index = ParquetIndex(id=_parquet_path_id, s3_url=_res["path"])
-    _res_db = await _parquet_index.save(db_session)
+    # _parquet_index = ParquetIndex(id=_parquet_path_id, s3_url=_res["path"])
+    # _res_db = await _parquet_index.save(db_session)
     # TODO: check how it looks in memory and if address alloc by _df is the same as request.app.your_books_data
     # TODO: drop all dfs which are already saved in s3 and sql
 
     _index: IndexService = IndexService()
-    _index_res = _index.write_index(dataframe=_df, parquet_path_id=_parquet_path_id)
+    _index_res = _index.write_lite_index(dataframe=_df, parquet_path_id=_parquet_path_id)
 
     return {
         "message": _res,
-        "database": _res_db,
+        # "database": _res_db,
         "books_added_to_index": _index_res,
     }  # Return the result message
 
