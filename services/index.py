@@ -6,6 +6,7 @@ from tenacity import retry, wait_fixed, wait_random_exponential, stop_after_atte
 from config import settings as global_settings
 from services.utlis import SingletonMetaNoArgs
 
+
 @define
 class IndexService(metaclass=SingletonMetaNoArgs):
     index_engine: str = global_settings.index_engine

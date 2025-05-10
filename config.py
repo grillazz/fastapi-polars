@@ -36,9 +36,7 @@ class Settings(BaseSettings):
     POSTGRES_HOST: str = Field(default="localhost")
     POSTGRES_DB: str = Field(default="metabase")
 
-    SQLITE_DB: str = Field(
-        default="sqlite:///mydb1.sqlite"
-    )
+    SQLITE_DB: str = Field(default="sqlite:///mydb1.sqlite")
 
     @computed_field
     @property
