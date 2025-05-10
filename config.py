@@ -15,17 +15,17 @@ class S3Credentials(BaseModel):
 
 class Settings(BaseSettings):
     dataframe_dump_size: int = Field(
-        default=5, description="Size threshold for dumping the DataFrame in MB"
+        default=1, description="Size threshold for dumping the DataFrame in MB"
     )
     dataframe_name: str = Field(
         default="your_books_data", description="Name of the DataFrame"
     )
     index_engine: str = Field(
-        default="adbc",
-        description="ADBC: Arrow Database Connectivity https://arrow.apache.org/docs/format/ADBC.html",
+        default="sqlalchemy",
+        description="Engine used for writing to the index table. Options: 'sqlalchemy', 'adbc'",
     )
     index_table: str = Field(
-        default="books_index_2",
+        default="books_index1",
         description="Name of the index table in the database",
     )
 
@@ -35,6 +35,8 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str = Field(default="secret")
     POSTGRES_HOST: str = Field(default="localhost")
     POSTGRES_DB: str = Field(default="metabase")
+
+    SQLITE_DB: str = Field(default="sqlite:///mydb1.sqlite")
 
     @computed_field
     @property

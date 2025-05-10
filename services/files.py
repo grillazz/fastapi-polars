@@ -35,7 +35,8 @@ class FilenameGeneratorService(metaclass=SingletonMeta):
         if new_date != self.current_date:
             self.current_date = new_date
             self.sequence = itertools.count(1)
-        return f"{self.base_name}_{self.current_date}_{str(os.getpid())}_{next(self.sequence):03}.parquet"
+            # call await run_in_threadpool to copy very last daily parquet file to s3
+        return f"{self.current_date}/{self.base_name}_{str(os.getpid())}_{next(self.sequence):03}.parquet"
 
 
 def get_filename_generator_service() -> FilenameGeneratorService:
