@@ -183,7 +183,7 @@ async def ingest_data_into_frame(
     # TODO: using IndexService write _pl_data_frame as increment to observability table in relational database
     # write index should catch dupes before writing to database
     background_tasks.add_task(
-        index.write_lite_index,
+        index.write_index,
         dataframe=_pl_data_frame,
         parquet_path_id=hash("zyzzy"),
     )
@@ -251,7 +251,7 @@ async def materialize_data_in_parquet_file(
     # TODO: drop all dfs which are already saved in s3 and sql
 
     _index: IndexService = IndexService()
-    _index_res = _index.write_lite_index(dataframe=_df, parquet_path_id=_parquet_path_id)
+    _index_res = _index.write_index(dataframe=_df, parquet_path_id=_parquet_path_id)
 
     return {
         "message": _res,

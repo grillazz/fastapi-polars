@@ -1,47 +1,23 @@
 from typing import Any
+import time
 import polars as pl
 from attrs import define
+from tenacity import retry, wait_fixed, wait_random_exponential, stop_after_attempt
 from config import settings as global_settings
-
+from services.utlis import SingletonMetaNoArgs
 
 @define
-class IndexService:
-    """
-    Service for writing dataframes to a database index table.
-
-    Attributes:
-        index_engine (str): Database engine type.
-        index_table (str): Name of the index table.
-        index_connection (str): Database connection string.
-    """
-
+class IndexService(metaclass=SingletonMetaNoArgs):
     index_engine: str = global_settings.index_engine
     index_table: str = global_settings.index_table
-    index_connection: str = global_settings.pg_url.unicode_string()
+    # index_connection: str = global_settings.pg_url.unicode_string()
+    index_connection: str = global_settings.SQLITE_DB
 
     def __call__(self) -> "IndexService":
-        """
-        Makes the service callable, allowing it to be used as a dependency.
-
-        Returns:
-            IndexService: The current instance of the service.
-        """
         return self
 
+    @retry(wait=wait_fixed(1), stop=stop_after_attempt(7))
     def write_index(self, dataframe: pl.DataFrame, parquet_path_id: int) -> Any:
-        """
-        Writes a Polars DataFrame to the database index table.
-
-        Args:
-            dataframe (pl.DataFrame): DataFrame to write.
-            parquet_path_id (int): ID of the parquet path.
-
-        Returns:
-            Any: Result of the database write operation.
-
-        Raises:
-            Exception: If there is an error writing to the database.
-        """
         dataframe = dataframe.select(
             ["isbn", "pages", "author", "pub_date", "pid", "hash"]
         ).with_columns(pl.lit(parquet_path_id).alias("parquet_id"))

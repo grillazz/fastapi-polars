@@ -21,11 +21,11 @@ class Settings(BaseSettings):
         default="your_books_data", description="Name of the DataFrame"
     )
     index_engine: str = Field(
-        default="adbc",
+        default="sqlalchemy",
         description="ADBC: Arrow Database Connectivity https://arrow.apache.org/docs/format/ADBC.html",
     )
     index_table: str = Field(
-        default="books_index",
+        default="books_index1",
         description="Name of the index table in the database",
     )
 
@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str = Field(default="secret")
     POSTGRES_HOST: str = Field(default="localhost")
     POSTGRES_DB: str = Field(default="metabase")
+
+    SQLITE_DB: str = Field(
+        default="sqlite:///mydb1.sqlite"
+    )
 
     @computed_field
     @property
