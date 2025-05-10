@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     )
     index_engine: str = Field(
         default="sqlalchemy",
-        description="ADBC: Arrow Database Connectivity https://arrow.apache.org/docs/format/ADBC.html",
+        description="Engine used for writing to the index table. Options: 'sqlalchemy', 'adbc'",
     )
     index_table: str = Field(
         default="books_index1",
