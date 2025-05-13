@@ -5,11 +5,13 @@ This module provides the IndexService singleton class that handles writing
 Polars DataFrames to a database with built-in retry functionality for
 handling transient database errors.
 """
-
+import os
 from typing import Any
 import polars as pl
 from attrs import define
 from tenacity import retry, wait_fixed, stop_after_attempt
+from whenever import Instant
+
 from config import settings as global_settings
 from services.utlis import SingletonMetaNoArgs
 
@@ -70,6 +72,25 @@ class IndexService(metaclass=SingletonMetaNoArgs):
                 connection=self.index_connection,
                 engine=self.index_engine,
                 if_table_exists="append",
+            )
+            return _res
+        except Exception as e:
+            print(f"Error writing to database: {e}")
+            raise
+
+
+    @retry(wait=wait_fixed(1), stop=stop_after_attempt(7))
+    def swap_dataframe_to_sqlite(self, dataframe: pl.DataFrame, if_table_exists: str = "append", ) -> Any:
+
+        _current_date = Instant.now().py_datetime().strftime("%Y%m%d")
+        _connection = f"sqlite:///{_current_date}_{str(os.getpid())}.sqlite"
+
+        try:
+            _res = dataframe.write_database(
+                table_name=self.index_table,
+                connection=_connection,
+                engine=self.index_engine, # 'adbc' or 'sqlite'
+                if_table_exists=if_table_exists, # 'append' or 'replace'
             )
             return _res
         except Exception as e:
