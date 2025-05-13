@@ -183,9 +183,8 @@ async def ingest_data_into_frame(
     # TODO: using IndexService write _pl_data_frame as increment to observability table in relational database
     # write index should catch dupes before writing to database
     background_tasks.add_task(
-        index.write_index,
+        index.swap_dataframe_to_sqlite,
         dataframe=_pl_data_frame,
-        parquet_path_id=hash("zyzzy"),
     )
 
     # TODO: do write parquet if this is last chunk of data for day
@@ -206,6 +205,7 @@ async def ingest_data_into_frame(
             remove_daily_parquet_file(
                 f"daily_{str(os.getpid())}.parquet"
             )  # delete the persistence file from the local filesystem
+            index.swap_dataframe_to_sqlite(pl.DataFrame(schema=pl_book_schema), if_table_exists="replace")
             return {"message": _res}
 
     return {"message": "Data frozen in ice cube"}  # Return a success message
