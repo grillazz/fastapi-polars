@@ -11,3 +11,4 @@ pl_book_schema = pl.Schema(
         "hash": pl.Int64,
     }
 )
+

@@ -4,6 +4,7 @@ import os
 
 from fastapi import Request, APIRouter, Depends, HTTPException, BackgroundTasks
 from fastapi.responses import JSONResponse
+from whenever._whenever import Instant
 
 from models.parquet import ParquetIndex
 from schemas.pydantic import BookSchema
@@ -170,6 +171,22 @@ async def ingest_data_into_frame(
             for _d in data
         ]
     )  # Convert input data to a Polars DataFrame
+
+    # check if day tail needs to be generated
+    if request.app.now != Instant.now().py_datetime().date():
+        _file = (
+            await filename_generator.generate_filename(tail=True)
+        )  # Generate a filename for the dump
+
+        _res = s3.materialize_dataframe(
+            getattr(request.app, global_settings.dataframe_name), _file
+        )  # Materialize the DataFrame to S3, Make this function synchronous and blocking on IO.
+        # Other coroutines will naturally wait for it to complete.
+        if _res:
+            delattr(request.app, global_settings.dataframe_name)  # Clear the DataFrame
+            # TODO: clean parquet swap file
+            request.app.now = Instant.now().py_datetime().strftime("%Y%m%d")
+
     if not hasattr(request.app, global_settings.dataframe_name):
         setattr(
             request.app,
@@ -186,8 +203,11 @@ async def ingest_data_into_frame(
         index.swap_dataframe_to_sqlite,
         dataframe=_pl_data_frame,
     )
+    background_tasks.add_task(
+        request.app.pqwriter.write_table,
+        _pl_data_frame.to_arrow()
+    )
 
-    # TODO: do write parquet if this is last chunk of data for day
     if (
         getattr(request.app, global_settings.dataframe_name).estimated_size(unit="mb")
         > global_settings.dataframe_dump_size
@@ -202,10 +222,7 @@ async def ingest_data_into_frame(
         # Other coroutines will naturally wait for it to complete.
         if _res:
             delattr(request.app, global_settings.dataframe_name)  # Clear the DataFrame
-            remove_daily_parquet_file(
-                f"daily_{str(os.getpid())}.parquet"
-            )  # delete the persistence file from the local filesystem
-            index.swap_dataframe_to_sqlite(pl.DataFrame(schema=pl_book_schema), if_table_exists="replace")
+            # TODO: clean parquet swap file
             return {"message": _res}
 
     return {"message": "Data frozen in ice cube"}  # Return a success message

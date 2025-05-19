@@ -19,11 +19,11 @@ run-uvicorn: ## Run FastAPI with uvicorn
 # Run FastAPI with granian
 .PHONY: run-granian
 run-granian: ## Run FastAPI with granian
-	uv run granian --interface asgi main:app --host $(HOST) --port $(PORT) --log-level $(LOG_LEVEL) --workers $(WORKERS) --no-ws --loop uvloop --interface asgi --pid-file .pid
+	granian main:app --host $(HOST) --port $(PORT) --log-level $(LOG_LEVEL) --workers $(WORKERS) --loop uvloop --interface asgi
 
 .PHONY: run-granian-dev
 run-granian-dev: ## Run FastAPI with granian
-	uv run granian --interface asgi main:app --host $(HOST) --port $(PORT) --log-level $(LOG_LEVEL) --no-ws --loop uvloop --interface asgi
+	granian main:app --host $(HOST) --port $(PORT) --log-level $(LOG_LEVEL) --loop uvloop --interface asgi --runtime-threads 2   --runtime-blocking-threads 2  --runtime-mode mt
 
 # Create new alembic database migration
 .PHONY: create-db-migration

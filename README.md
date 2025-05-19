@@ -102,4 +102,8 @@ The `compose-s3.yaml` file is already configured to set up MinIO and create the 
 Open your browser and navigate to `http://localhost:8000/docs` to access the automatically generated API documentation.
 
 ### Summary
+Bronze is loaded as raw data into parquet files and s3, and the silver layer is created by transforming and saving dataframe copntent on the fly and save to relational database.
+
+Easy scalling by increase nummber of workers.
+
 You have now set up the FastAPI-Polars project with MinIO for S3-compatible storage. The project is ready for data ingestion, processing, and analytics using FastAPI and Polars.

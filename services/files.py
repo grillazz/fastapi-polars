@@ -24,13 +24,18 @@ class FilenameGeneratorService(metaclass=SingletonMeta):
         init=False, factory=lambda: Instant.now().py_datetime().strftime("%Y%m%d")
     )
 
-    async def generate_filename(self):
+    async def generate_filename(self, tail: bool = False) -> str:
         """
         Generate a filename with the base name, current date, and sequence number.
 
         Returns:
             str: The generated file name in the format '{base_name}_{current_date}_{sequence:03}.parquet'.
         """
+        if tail:
+            # If tail is True, return the filename without changing the date
+            self.sequence = itertools.count(1)
+            return f"{self.current_date}/{self.base_name}_{str(os.getpid())}_{next(self.sequence):03}.parquet"
+
         new_date = Instant.now().py_datetime().strftime("%Y%m%d")
         if new_date != self.current_date:
             self.current_date = new_date
