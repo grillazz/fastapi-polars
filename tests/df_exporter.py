@@ -25,7 +25,7 @@ pqwriter.close()
 if __name__ == "__main__":
     # Run the test
     _day = Instant.now().py_datetime().date()
-    print(_day)
+    print(type(_day))
     pass
 
 # save df to s3 will drop sample.parquet file ?

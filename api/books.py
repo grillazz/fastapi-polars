@@ -5,7 +5,7 @@ import os
 from fastapi import Request, APIRouter, Depends, HTTPException, BackgroundTasks
 from fastapi.responses import JSONResponse
 from whenever._whenever import Instant
-
+import pyarrow.parquet as pq
 from models.parquet import ParquetIndex
 from schemas.pydantic import BookSchema
 from schemas.polars import pl_book_schema
@@ -18,6 +18,7 @@ from services.s3 import S3Service
 from services.index import IndexService
 from services.database import DatabaseService
 from config import settings as global_settings
+from tenacity import retry, wait_fixed, stop_after_attempt
 
 router = APIRouter()
 
@@ -43,7 +44,7 @@ async def append_to_parquet_file(dataframe: pl.DataFrame, file_path: str):
         return False
 
 
-def remove_daily_parquet_file(file_path: str) -> bool:
+def remove_daily_parquet_file(file_path: str, request: Request) -> bool:
     """
     Removes a daily Parquet file from the filesystem.
 
@@ -55,7 +56,9 @@ def remove_daily_parquet_file(file_path: str) -> bool:
     """
     try:
         if os.path.exists(file_path):
+            request.app.pqwriter.close()
             os.remove(file_path)
+            request.app.pqwriter = pq.ParquetWriter(f"books_swap_{str(os.getpid())}.parquet",pl.DataFrame(schema=pl_book_schema).to_arrow().schema)
             logger.info(f"Successfully removed Parquet file: {file_path}")
             return True
         else:
@@ -63,6 +66,29 @@ def remove_daily_parquet_file(file_path: str) -> bool:
             return True
     except Exception as e:
         logger.error(f"Error removing Parquet file {file_path}: {e}")
+        return False
+
+@retry(wait=wait_fixed(1), stop=stop_after_attempt(7))
+def safe_write_table(pqwriter, table):
+    """
+    Safely write a table using pqwriter, handling AssertionError if the writer is closed.
+
+    Args:
+        pqwriter: An instance of pyarrow.parquet.ParquetWriter.
+        table: An Arrow Table or compatible object to write.
+
+    Returns:
+        bool: True if write succeeded, False otherwise.
+    """
+    try:
+        pqwriter.write_table(table)
+        return True
+    except AssertionError as e:
+        # Writer is closed
+        logger.error(f"ParquetWriter is closed: {e}")
+        return False
+    except Exception as e:
+        logger.error(f"Error writing table to Parquet: {e}")
         return False
 
 
@@ -184,7 +210,7 @@ async def ingest_data_into_frame(
         # Other coroutines will naturally wait for it to complete.
         if _res:
             delattr(request.app, global_settings.dataframe_name)  # Clear the DataFrame
-            # TODO: clean parquet swap file
+            remove_daily_parquet_file(f"books_swap_{str(os.getpid())}.parquet", request)
             request.app.now = Instant.now().py_datetime().strftime("%Y%m%d")
 
     if not hasattr(request.app, global_settings.dataframe_name):
@@ -204,7 +230,8 @@ async def ingest_data_into_frame(
         dataframe=_pl_data_frame,
     )
     background_tasks.add_task(
-        request.app.pqwriter.write_table,
+        safe_write_table,
+        request.app.pqwriter,
         _pl_data_frame.to_arrow()
     )
 
@@ -222,7 +249,7 @@ async def ingest_data_into_frame(
         # Other coroutines will naturally wait for it to complete.
         if _res:
             delattr(request.app, global_settings.dataframe_name)  # Clear the DataFrame
-            # TODO: clean parquet swap file
+            remove_daily_parquet_file(f"books_swap_{str(os.getpid())}.parquet", request)
             return {"message": _res}
 
     return {"message": "Data frozen in ice cube"}  # Return a success message
